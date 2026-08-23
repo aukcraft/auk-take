@@ -1,0 +1,17 @@
+{
+  "name": "auk-take",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "build": "turbo run build"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  }
+}

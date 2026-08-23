@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Dependency guard: @auktake/core must stay platform-free.
+      - name: Guard core against platform dependencies
+        run: |
+          node -e '
+          const pkg = require("./packages/core/package.json");
+          const deps = { ...pkg.dependencies, ...pkg.peerDependencies };
+          const banned = ["react", "react-native", "react-native-web", "@tauri-apps/api"];
+          const hits = banned.filter((b) => deps && Object.keys(deps).includes(b));
+          if (hits.length) {
+            console.error("FAIL: platform dependencies found in @auktake/core: " + hits.join(", "));
+            process.exit(1);
+          }
+          console.log("OK: @auktake/core has no platform dependencies");
+          '
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
