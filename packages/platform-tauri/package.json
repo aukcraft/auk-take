@@ -1,22 +1,25 @@
 {
-  "name": "@auktake/core",
+  "name": "@auktake/platform-tauri",
   "version": "0.1.0",
   "private": true,
-  "description": "AukTake plugin core: pure TypeScript, zero platform dependencies",
+  "description": "AukTake Tauri platform capabilities: JSON-file Storage with atomic rename writes",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./testing": "./src/testing/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src __tests__",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "peerDependencies": {
+    "@auktake/core": "workspace:*",
+    "@tauri-apps/plugin-fs": "^2.5.0"
+  },
   "devDependencies": {
+    "@auktake/core": "workspace:*",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.9.0",
     "typescript": "^5.6.0",
