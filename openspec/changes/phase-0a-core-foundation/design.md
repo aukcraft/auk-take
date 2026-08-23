@@ -2,7 +2,7 @@
 
 AukTake 从零开始。已收敛的架构决策（探索阶段达成共识）：
 
-- **分层**：Host（壳，不是插件：host-rn / host-tauri）→ Core（纯 TS，零平台依赖）→ Plugins（18 个实体，三层分级 🔒/⚠️/✅）
+- **分层**：Host（壳，不是插件：host-rn / host-tauri）→ Core（纯 TS，零平台依赖）→ Plugins（18 个实体，三层分级 locked/recommended/optional）
 - **通信三层**：EventBus（通知）/ CapabilityRegistry（UI 组件）/ ServiceRegistry（核心服务直调）
 - **依赖规则**：插件可 `import @auktake/core` 的接口定义，禁止 import 其他插件的内部实现文件
 - **数据模型**：TMDB 元数据内联快照（不建 Movie 表）；同一影片多次观看 = 多条 record；MoodEntry 为独立实体（心情历史，非单值字段）；支持电影/剧集（mediaType + season/episode）
@@ -36,7 +36,7 @@ AukTake 从零开始。已收敛的架构决策（探索阶段达成共识）：
 ```ts
 interface AukPlugin {
   readonly id: string;              // 如 'rating'、'sync-webdav'
-  readonly tier: 'locked' | 'recommended' | 'optional';  // 🔒/⚠️/✅
+  readonly tier: 'locked' | 'recommended' | 'optional';
   readonly permissions: Permission[];  // 如 ['storage:read', 'network:fetch']
   connect(ctx: PluginContext): Promise<PluginConnection>;  // 一次性：校验+握手
   create(ctx: PluginContext, conn: PluginConnection): PluginInstance; // 每次启动：纯重建
