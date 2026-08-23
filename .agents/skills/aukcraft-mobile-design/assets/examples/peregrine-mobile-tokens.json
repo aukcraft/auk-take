@@ -1,0 +1,11 @@
+{
+  "base": "#0B0E11",
+  "raised": "#14181D",
+  "hairline": "rgba(255,255,255,0.08)",
+  "ink": "#EDEDED",
+  "muted": "#8A9199",
+  "accent": "#2563EB",
+  "accentSoft": "#60A5FA",
+  "easeLock": "cubic-bezier(0.16, 1, 0.3, 1)",
+  "radius": 4
+}

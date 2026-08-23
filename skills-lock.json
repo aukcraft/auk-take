@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "skills": {
+    "animate": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/animate/SKILL.md",
+      "computedHash": "609e30351bf518b21a8cfe87cd1111554855527075d6563605bafe61963252f7"
+    },
+    "animate-expo": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/animate-expo/SKILL.md",
+      "computedHash": "c9eaf6603b97ca61b05c7561e1045b2f58b6d84cdf8d67565bff23a9ff94ce8a"
+    },
+    "apple-design": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apple-design/SKILL.md",
+      "computedHash": "8b94db67cb9edaad5f1501010804caa610131f1d2dfda0a27664b2e858deade3"
+    },
+    "aukcraft-dual-platform-bridge-skill": {
+      "source": "aukcraft/skills",
+      "sourceType": "github",
+      "skillPath": "skills/aukcraft-dual-platform-bridge-skill/SKILL.md",
+      "computedHash": "2f7eee5e051c0f6430dd42499de79b4d81c6c9f88475fb69398b97b783d219cc"
+    },
+    "aukcraft-headless-headed-split-skill": {
+      "source": "aukcraft/skills",
+      "sourceType": "github",
+      "skillPath": "skills/aukcraft-headless-headed-split-skill/SKILL.md",
+      "computedHash": "55786652060b9fc9049222ae9b730f481a49eddf7a8e8f2116c3f5e537ae3b9c"
+    },
+    "aukcraft-mobile-design": {
+      "source": "aukcraft/skills",
+      "sourceType": "github",
+      "skillPath": "skills/aukcraft-mobile-design/SKILL.md",
+      "computedHash": "38ff85801e9f941053930c1a2fadc6a78b829def92fa6dfbb619171f6e23235c"
+    },
+    "aukcraft-plugin-core-design-skill": {
+      "source": "aukcraft/skills",
+      "sourceType": "github",
+      "skillPath": "skills/aukcraft-plugin-core-design-skill/SKILL.md",
+      "computedHash": "c25de53a1bd892a489c6a1ddbdd152559c2b6ba94bacf313beb6f15c83b84ccd"
+    },
+    "aukcraft-site-design": {
+      "source": "aukcraft/skills",
+      "sourceType": "github",
+      "skillPath": "skills/aukcraft-site-design/SKILL.md",
+      "computedHash": "62db90372412c6a3fda45815a443c863993b4d7bb1fd24f48e9d205c374559d0"
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "41b0a4dc1a27164fe297845a6c6850a39e9242c42c9be999967fcee9df2c5974"
+    },
+    "find-animation-opportunities": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-animation-opportunities/SKILL.md",
+      "computedHash": "8fb8492eb8fbed1313cb430b5831d925d9b8964ca24f3c41a6244cbd1fd98732"
+    },
+    "improve-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/improve-animations/SKILL.md",
+      "computedHash": "eeb219a407e325b687af88db25771cc3018e3148245604112f5ac6990b6fd79c"
+    },
+    "pick-ui-library": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pick-ui-library/SKILL.md",
+      "computedHash": "f8d4d2cf4677bf54b14f35f62a741add93541bfcb67863315a40164365161b49"
+    },
+    "prototype": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/prototype/SKILL.md",
+      "computedHash": "f246d1f47566481d9207e1aa574bdee5454257d862919a6591283e9af2f57eab"
+    },
+    "review-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/review-animations/SKILL.md",
+      "computedHash": "b9f669af5ae280c19a592a94611520335a81de25c88f225bf60ae4b2d66c8c7c"
+    }
+  }
+}
