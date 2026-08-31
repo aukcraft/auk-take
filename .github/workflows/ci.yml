@@ -21,25 +21,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Dependency guard: @auktake/core must stay platform-free.
-      - name: Guard core against platform dependencies
-        run: |
-          node -e '
-          const pkg = require("./packages/core/package.json");
-          const deps = { ...pkg.dependencies, ...pkg.peerDependencies };
-          const banned = ["react", "react-native", "react-native-web", "@tauri-apps/api"];
-          const hits = banned.filter((b) => deps && Object.keys(deps).includes(b));
-          if (hits.length) {
-            console.error("FAIL: platform dependencies found in @auktake/core: " + hits.join(", "));
-            process.exit(1);
-          }
-          console.log("OK: @auktake/core has no platform dependencies");
-          '
+      # Dependency-direction guard: core purity + platform/ui package
+      # direction rules (spec: host-shell). Replaces the inline 0a guard.
+      - name: Dependency direction guard
+        run: node scripts/dep-guard.cjs
 
       - name: Lint
         run: pnpm lint
 
-      - name: Typecheck
+      - name: Typecheck (includes moduleSuffixes consistency via tsc configs)
         run: pnpm typecheck
 
       - name: Test
