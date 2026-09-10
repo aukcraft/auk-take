@@ -63,8 +63,9 @@ export function createEditOverlay(
         }
         session.close();
       } catch (error) {
+        // Storage/persist failure MUST be visible, never a silent close.
         console.warn("[edit] save failed", error);
-        session.close();
+        session.failSubmit("保存失败：数据未能写入磁盘，请重试；详情见控制台日志");
       }
     };
 
@@ -179,6 +180,7 @@ export function createEditOverlay(
                   />
                 </Field>
               </ScrollView>
+              {state.formError ? <Text style={styles.formError}>{state.formError}</Text> : null}
               <View style={styles.actions}>
                 <Pressable style={styles.cancel} onPress={() => session.close()}>
                   <Text style={styles.cancelText}>取消</Text>
@@ -251,6 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   error: { fontSize: 12, color: colors.danger },
+  formError: { fontSize: 13, color: colors.danger, textAlign: "center" },
   reviewInput: {
     backgroundColor: colors.surface,
     borderRadius: radius.sm,

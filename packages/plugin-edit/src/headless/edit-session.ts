@@ -20,6 +20,8 @@ export interface EditSessionState {
   readonly editingId: string | null;
   readonly draft: EditorDraft;
   readonly errors: FieldErrors;
+  /** Form-level error (e.g. storage write failure). null = none. */
+  readonly formError: string | null;
   readonly deletePrompt: DeletePrompt | null;
 }
 
@@ -28,6 +30,7 @@ const CLOSED: EditSessionState = {
   editingId: null,
   draft: emptyDraft(""),
   errors: {},
+  formError: null,
   deletePrompt: null,
 };
 
@@ -53,6 +56,7 @@ export class EditSessionController {
       editingId: null,
       draft: emptyDraft(defaultWatchedAt),
       errors: {},
+      formError: null,
       deletePrompt: null,
     });
   }
@@ -64,6 +68,7 @@ export class EditSessionController {
       editingId: record.id,
       draft: draftFromRecord(record),
       errors: {},
+      formError: null,
       deletePrompt: null,
     });
   }
@@ -106,6 +111,16 @@ export class EditSessionController {
   /** Close after a successful save (or cancel). */
   close(): void {
     this.transition(CLOSED);
+  }
+
+  /** Return to editing after a FAILED save, surfacing a form-level error. */
+  failSubmit(formError: string): void {
+    this.transition({ ...this.state, status: "editing", formError });
+  }
+
+  clearFormError(): void {
+    if (this.state.formError === null) return;
+    this.transition({ ...this.state, formError: null });
   }
 
   /** Second-confirmation prompt for deletion (spec: 删除二次确认). */
