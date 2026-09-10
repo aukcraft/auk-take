@@ -19,4 +19,8 @@ export default defineConfig({
   server: {
     fs: { allow: [path.resolve(import.meta.dirname, "../..")] },
   },
+  preview: {
+    // sandbox preview proxies via external host names
+    allowedHosts: true,
+  },
 });
