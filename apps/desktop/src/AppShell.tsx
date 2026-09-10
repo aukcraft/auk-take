@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { CapabilityRegistry } from "@auktake/core";
+import { colors } from "@auktake/ui-contracts";
 import type { TabDefinition, TabId } from "@auktake/ui-nav";
 
 interface AppShellProps {
@@ -73,7 +74,7 @@ export function AppShell({ tabs, current, titles, registry, onSwitch }: AppShell
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, height: "100vh" },
+  root: { flex: 1, height: "100vh", backgroundColor: colors.bg },
   rootWide: { flexDirection: "row" },
   rootNarrow: { flexDirection: "column" },
   sidebar: {
@@ -87,9 +88,10 @@ const styles = StyleSheet.create({
   sideItemActive: { backgroundColor: "rgba(128,128,128,0.15)" },
   sideText: { fontSize: 15, color: "#EDEDF2" },
   sideTextActive: { fontWeight: "600" },
-  main: { flex: 1, overflow: "hidden" },
+  main: { flex: 1, overflow: "hidden", backgroundColor: colors.bg },
   tabbar: {
     width: "100%",
+    backgroundColor: colors.surface,
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(128,128,128,0.3)",

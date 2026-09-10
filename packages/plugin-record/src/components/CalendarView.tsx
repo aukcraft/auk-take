@@ -211,7 +211,7 @@ export function createCalendarView(
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, gap: spacing.md },
+  root: { flex: 1, gap: spacing.md, backgroundColor: colors.bg },
   yearBar: {
     flexDirection: "row",
     alignItems: "center",

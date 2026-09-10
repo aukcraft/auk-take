@@ -90,7 +90,7 @@ export function createTimelineView(
 }
 
 const styles = StyleSheet.create({
-  list: { padding: spacing.md, gap: spacing.lg },
+  list: { padding: spacing.md, gap: spacing.lg, backgroundColor: colors.bg },
   group: { gap: spacing.sm },
   groupTitle: {
     fontSize: 16,

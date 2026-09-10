@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
+import { colors } from "@auktake/ui-contracts";
 import { NavState, TAB_CAPABILITY_KEYS, TAB_TITLES, visibleTabs, type TabDefinition } from "@auktake/ui-nav";
 import { AppShell } from "./AppShell";
 import { OverlayHost } from "./OverlayHost";
@@ -9,7 +10,7 @@ import { createRuntime } from "./bootstrap";
 function ProfilePlaceholder() {
   return (
     <View style={{ padding: 32 }}>
-      <Text style={{ fontSize: 18, opacity: 0.6 }}>我的（占位）</Text>
+      <Text style={{ fontSize: 18, opacity: 0.6, color: colors.text }}>我的（占位）</Text>
     </View>
   );
 }
@@ -33,7 +34,7 @@ export function App() {
   const tabs: TabDefinition[] = visibleTabs(registry, undefined, { dev: true });
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <AppShell
         tabs={tabs}
         current={tab}

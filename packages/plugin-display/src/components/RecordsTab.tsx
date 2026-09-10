@@ -98,7 +98,7 @@ function EmptyState({ openEditor }: { openEditor: RecordEditCommand | undefined 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: colors.bg },
   segment: {
     flexDirection: "row",
     gap: spacing.xs,

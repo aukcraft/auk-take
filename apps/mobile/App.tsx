@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { colors } from "@auktake/ui-contracts";
 import { NavState, TAB_CAPABILITY_KEYS, TAB_TITLES, visibleTabs, type TabDefinition, type TabId } from "@auktake/ui-nav";
 import { createRuntime } from "./src/bootstrap";
 import { OverlayHost } from "./src/OverlayHost";
@@ -68,16 +69,17 @@ export default function App(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: colors.bg },
   content: { flex: 1 },
   placeholder: { padding: 32 },
-  placeholderText: { fontSize: 18, opacity: 0.6 },
+  placeholderText: { fontSize: 18, opacity: 0.6, color: colors.text },
   tabbar: {
     flexDirection: "row",
+    backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(128,128,128,0.3)",
   },
   tabItem: { flex: 1, alignItems: "center", paddingVertical: 12 },
-  tabText: { fontSize: 14, opacity: 0.6 },
+  tabText: { fontSize: 14, opacity: 0.6, color: colors.text },
   tabTextActive: { opacity: 1, fontWeight: "600" },
 });
