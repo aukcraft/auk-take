@@ -167,13 +167,15 @@ export function createEditOverlay(
                     placeholder="8.5"
                   />
                 </Field>
-                <Field label="观后感（可选）">
+                <Field label={`观后感${state.draft.review.length > 0 ? ` · ${state.draft.review.length} 字` : ""}`}>
                   <TextInput
                     {...inputProps}
+                    style={styles.reviewInput}
                     value={state.draft.review}
                     onChangeText={(v) => session.setField("review", v)}
                     multiline
-                    placeholder="写下此刻的感受…"
+                    numberOfLines={6}
+                    placeholder="这部作品哪里打动了你？记住此刻的感受——观后感是 AukTake 的核心。"
                   />
                 </Field>
               </ScrollView>
@@ -249,6 +251,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   error: { fontSize: 12, color: colors.danger },
+  reviewInput: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+    minHeight: 132,
+    textAlignVertical: "top",
+  },
   segment: { flexDirection: "row", gap: spacing.sm },
   segItem: {
     flex: 1,
