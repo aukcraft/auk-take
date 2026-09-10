@@ -3,37 +3,50 @@ import type { FsPort } from "./fs-port.js";
 import { TauriFileStorage } from "./storage.js";
 
 /**
- * FsPort adapter bound to @tauri-apps/plugin-fs. Exists only inside the
- * Tauri runtime; the atomic-write orchestration itself lives in
- * TauriFileStorage and is tested against an in-memory fs in pure Node.
+ * Relative storage paths are resolved against the Tauri app-data dir
+ * VIA THE API at call time. Injecting the dir from Rust with
+ * webview.eval at setup proved unreliable on Windows (WebView2 drops
+ * the script when it runs before navigation completes), which made
+ * saves silently fail; async resolution has no such race.
  */
+const WINDOWS_ABSOLUTE = /^[A-Za-z]:[\\/]/;
+
+async function resolvePath(path: string): Promise<string> {
+  if (path.startsWith("/") || path.startsWith("\\") || WINDOWS_ABSOLUTE.test(path)) {
+    return path;
+  }
+  const { appDataDir, join } = await import("@tauri-apps/api/path");
+  return join(await appDataDir(), path);
+}
+
+/** FsPort adapter bound to @tauri-apps/plugin-fs. Exists only inside the Tauri runtime. */
 export const tauriFs: FsPort = {
   async readTextFile(path) {
     try {
       const { readTextFile } = await import("@tauri-apps/plugin-fs");
-      return await readTextFile(path);
+      return await readTextFile(await resolvePath(path));
     } catch {
       return null; // not found (or unreadable) treated as empty store
     }
   },
   async writeTextFile(path, contents) {
-    await writeTextFile(path, contents);
+    await writeTextFile(await resolvePath(path), contents);
   },
   async rename(oldPath, newPath) {
     // plugin-fs rename fails when destination exists on some platforms;
     // remove first, then rename (temp-file pattern keeps this safe).
     try {
       const { remove } = await import("@tauri-apps/plugin-fs");
-      await remove(newPath);
+      await remove(await resolvePath(newPath));
     } catch {
       // destination absent: fine
     }
-    await rename(oldPath, newPath);
+    await rename(await resolvePath(oldPath), await resolvePath(newPath));
   },
   async remove(path) {
     try {
       const { remove } = await import("@tauri-apps/plugin-fs");
-      await remove(path);
+      await remove(await resolvePath(path));
     } catch {
       // missing file: no-op
     }

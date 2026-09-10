@@ -16,14 +16,16 @@
   },
   "peerDependencies": {
     "@auktake/core": "workspace:*",
-    "@tauri-apps/plugin-fs": "^2.5.0"
+    "@tauri-apps/plugin-fs": "^2.5.0",
+    "@tauri-apps/api": "^2.9.0"
   },
   "devDependencies": {
-    "@auktake/core": "workspace:*",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.9.0",
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "@auktake/core": "workspace:*",
+    "@tauri-apps/api": "^2.9.0"
   }
 }

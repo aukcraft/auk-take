@@ -38,6 +38,9 @@ importers:
       '@auktake/ui-nav':
         specifier: workspace:*
         version: link:../../packages/ui-nav
+      '@tauri-apps/api':
+        specifier: ^2.9.0
+        version: 2.11.1
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -201,6 +204,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.9.0)
+      '@tauri-apps/api':
+        specifier: ^2.9.0
+        version: 2.11.1
       eslint:
         specifier: ^10.9.0
         version: 10.9.0
