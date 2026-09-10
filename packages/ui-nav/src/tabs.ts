@@ -20,6 +20,18 @@ export interface TabDefinition {
   readonly required?: boolean;
 }
 
+/**
+ * Tab content capability keys: single source for shells AND plugins
+ * (plugins register tab content under these keys). Extends the
+ * ui-contracts key philosophy to ui-nav-owned keys.
+ */
+export const TAB_CAPABILITY_KEYS = {
+  records: "ui:tab:records",
+  calendar: "ui:tab:calendar",
+  read: "ui:tab:read",
+  profile: "ui:tab:profile",
+} as const;
+
 /** Hardcoded zh-CN titles for Phase 0b (titleKey -> text). */
 export const TAB_TITLES: Record<string, string> = {
   "tab.title.records": "记录",
@@ -32,7 +44,7 @@ export const TAB_TITLES: Record<string, string> = {
 export const DEFAULT_TABS: readonly TabDefinition[] = [
   {
     id: "records",
-    capabilityKey: "ui:tab:records",
+    capabilityKey: TAB_CAPABILITY_KEYS.records,
     iconKey: "ui:icon:records",
     titleKey: "tab.title.records",
     order: 0,
@@ -40,7 +52,7 @@ export const DEFAULT_TABS: readonly TabDefinition[] = [
   },
   {
     id: "calendar",
-    capabilityKey: "ui:tab:calendar",
+    capabilityKey: TAB_CAPABILITY_KEYS.calendar,
     iconKey: "ui:icon:calendar",
     titleKey: "tab.title.calendar",
     order: 1,
@@ -48,14 +60,14 @@ export const DEFAULT_TABS: readonly TabDefinition[] = [
   },
   {
     id: "read",
-    capabilityKey: "ui:tab:read",
+    capabilityKey: TAB_CAPABILITY_KEYS.read,
     iconKey: "ui:icon:read",
     titleKey: "tab.title.read",
     order: 2,
   },
   {
     id: "profile",
-    capabilityKey: "ui:tab:profile",
+    capabilityKey: TAB_CAPABILITY_KEYS.profile,
     iconKey: "ui:icon:profile",
     titleKey: "tab.title.profile",
     order: 3,
