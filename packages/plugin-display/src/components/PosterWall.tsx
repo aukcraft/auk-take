@@ -50,7 +50,9 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
 }
 
 function ColorCard({ record }: { record: MovieRecord }) {
-  const slot = POSTER_PALETTE[colorHash(record.id)] ?? POSTER_PALETTE[0]!;
+  // Hash the TITLE, not the record id: rewatching creates a new record
+  // (new ULID) but the same movie must keep the same placeholder color.
+  const slot = POSTER_PALETTE[colorHash(record.tmdb.title)] ?? POSTER_PALETTE[0]!;
   return (
     <View style={[styles.card, { backgroundColor: slot.bg }]}>
       <Text style={[styles.cardTitle, { color: slot.fg }]} numberOfLines={3}>

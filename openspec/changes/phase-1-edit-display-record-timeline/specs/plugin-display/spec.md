@@ -8,11 +8,11 @@ plugin-display SHALL 实现 `AukPlugin` 契约（id `display`，tier `locked`，
 - **THEN** 「记录」tab 渲染海报墙内容，不再显示壳占位
 
 ### Requirement: 海报墙网格
-海报墙 SHALL 以网格渲染全部记录，按 `user.watchedAt` 倒序排列。卡片图片解析顺序 SHALL 为 `mediaCache.poster` → `tmdb.posterPath` → 确定性标题色卡；Phase 1 无图片数据时 MUST 全部走色卡分支，但解析管线结构 SHALL 保持 Phase 2 图片能力零结构改动接入。网格列数 SHALL 按平台自适应：移动端 3 列，桌面端按窗口宽度断点增列。
+海报墙 SHALL 以网格渲染全部记录，按 `user.watchedAt` 倒序排列。卡片图片解析顺序 SHALL 为 `mediaCache.poster` → `tmdb.posterPath` → 以标题文本确定性生成的标题色卡；Phase 1 无图片数据时 MUST 全部走色卡分支，但解析管线结构 SHALL 保持 Phase 2 图片能力零结构改动接入。网格列数 SHALL 按平台自适应：移动端 3 列，桌面端按窗口宽度断点增列。
 
 #### Scenario: 无图记录渲染色卡
 - **WHEN** 记录无 mediaCache 与 posterPath（Phase 1 全量如此）
-- **THEN** 卡片渲染确定性色卡（基于 record id 映射色板）叠加标题文字，同 id 双端颜色一致
+- **THEN** 卡片渲染确定性色卡（基于记录标题映射色板）叠加标题文字，同标题双端颜色一致
 
 #### Scenario: 倒序排列
 - **WHEN** 集合含多条不同 watchedAt 的记录

@@ -2,7 +2,7 @@
 
 - [x] 1.1 `packages/ui-contracts` 骨架：package.json（peer: core、react）、tsconfig（moduleSuffixes 与双端一致）、vitest 配置
 - [x] 1.2 能力 key 与事件名常量（`cmd:record-edit/delete/detail`、`ui:view:timeline`、`ui:overlay:root`、`record:created/updated/deleted`）+ 契约类型（三个命令签名、`TimelineComponent`）
-- [x] 1.3 最小设计令牌：色板/间距/圆角/字重、8 色海报占位板 + `colorHash(recordId)` 确定性映射、热力图 5 级强度色
+- [x] 1.3 最小设计令牌：色板/间距/圆角/字重、8 色海报占位板 + `colorHash`（按标题）确定性映射、热力图 5 级强度色
 - [x] 1.4 `createCollectionProjection` headless 工具：注入 Storage + 事件名列表，loadAll 全量、事件失效、microtask 合并去抖、不可变快照 + subscribe
 - [x] 1.5 ui-contracts 单测（纯 Node）：colorHash 确定性、投影的启动加载/事件失效/合并去抖/退订、常量无重复
 - [x] 1.6 `PluginRuntimeDeps` 类型与各插件工厂签名约定（deps 显式注入，core 零改动）
@@ -25,7 +25,7 @@
 
 - [x] 4.1 `packages/plugin-display` 骨架（同 3.1 模式，peer: react/react-native）
 - [x] 4.2 headless：投影接入（`createCollectionProjection` records）+ selector 纯函数（watchedAt 倒序、色卡解析顺序 mediaCache→posterPath→色卡）
-- [x] 4.3 headed：海报墙网格（移动 3 列 FlatList / 桌面按宽度断点增列，同文件分支）+ 确定性色卡卡片（colorHash + 标题/年份）
+- [x] 4.3 headed：海报墙网格（移动 3 列 FlatList / 桌面按宽度断点增列，同文件分支）+ 确定性色卡卡片（colorHash(标题) + 标题/年份）
 - [x] 4.4 headed：空态视图 + 「记录第一部影片」CTA（命令缺失时隐藏）
 - [x] 4.5 headed：只读详情（移动底部弹层/桌面居中卡片分支），注册 `cmd:record-detail`，动作按钮转发 edit 命令（缺失隐藏）
 - [x] 4.6 「海报墙/时间线」segmented 切换骨架：拉取 `ui:view:timeline`，未注册隐藏切换 + dev warn

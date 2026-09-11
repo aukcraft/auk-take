@@ -26,7 +26,7 @@ function TimelineRow({
   record: MovieRecord;
   openDetail: RecordDetailCommand | undefined;
 }) {
-  const slot = POSTER_PALETTE[colorHash(record.id)] ?? POSTER_PALETTE[0]!;
+  const slot = POSTER_PALETTE[colorHash(record.tmdb.title)] ?? POSTER_PALETTE[0]!;
   const badge = episodeBadge(record);
   const tappable = openDetail !== undefined;
   return (

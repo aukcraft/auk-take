@@ -66,14 +66,15 @@ export function heatmapLevel(count: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 /**
- * Deterministic record-id → palette slot mapping. Same id MUST map to
- * the same slot on both platforms (spec scenario "占位色确定性").
- * FNV-1a style fold keeps the distribution stable and cheap.
+ * Deterministic text → palette slot mapping. Callers hash the record
+ * TITLE (same movie = same color across rewatches and platforms, spec
+ * scenario "占色确定性"); any stable string works. FNV-1a style fold
+ * keeps the distribution stable and cheap.
  */
-export function colorHash(recordId: string): number {
+export function colorHash(text: string): number {
   let h = 0x811c9dc5;
-  for (let i = 0; i < recordId.length; i++) {
-    h ^= recordId.charCodeAt(i);
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
   return h % POSTER_PALETTE.length;
