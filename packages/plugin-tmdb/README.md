@@ -4,12 +4,14 @@ TMDB 元数据插件（Phase 2）：编辑器搜索绑定、存量哨兵补全�
 
 ## 内置 API Key（不进 git）
 
-`src/builtin-key.json` 已被 .gitignore 忽略，是构建期/运行期读取内置默认
-TMDB Key 的通道（Metro 与 Vite 均原生支持 JSON import，双端零配置）：
+`src/builtin-key.json` 是读取内置默认 TMDB Key 的通道（Metro 与 Vite 均
+原生支持 JSON import，双端零配置）。仓库里**始终提交空占位文件**（CI 可
+构建，未配置即优雅降级）；本地填入真实 Key 后请防误提交：
 
 ```bash
-cp packages/plugin-tmdb/builtin-key.example.json packages/plugin-tmdb/src/builtin-key.json
-# 填入 {"apiKey": "<TMDB API Key v3>"}
+echo '{ "apiKey": "<你的 TMDB API Key v3>" }' > packages/plugin-tmdb/src/builtin-key.json
+git update-index --skip-worktree packages/plugin-tmdb/src/builtin-key.json
+# 恢复跟踪：git update-index --no-skip-worktree <file>
 ```
 
 - `apiKey` 为空串 = 未内置：搜索/补全返回空结果并提示，应用回退 Phase 1 手动形态
