@@ -138,6 +138,7 @@ export function createDetailOverlay(
                   <Pressable
                     style={styles.actionButton}
                     onPress={() => {
+                      store.close(); // hand over to the editor overlay
                       if (id) openEditor({ recordId: id });
                     }}
                   >
@@ -148,6 +149,7 @@ export function createDetailOverlay(
                   <Pressable
                     style={[styles.actionButton, styles.deleteButton]}
                     onPress={() => {
+                      store.close(); // the delete-confirm dialog takes over
                       if (id) requestDelete(id);
                     }}
                   >
