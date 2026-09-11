@@ -19,7 +19,7 @@
 - [x] 3.4 headless 单测（纯 Node）：校验矩阵全部场景、编辑保持 id/createdAt、删除取消/确认、快照默认快照值
 - [x] 3.5 工厂 `createEditPlugin(deps)`：connect 空 state；create 注册 `cmd:record-edit`/`cmd:record-delete` 函数能力与 `ui:overlay:root` 弹层组件
 - [x] 3.6 headed：编辑弹层 UI（RN Modal + 表单字段 + 逐字段错误反馈 + 未评分显式呈现），纯 RN 语法单源
-- [ ] 3.7 双壳接线：bootstrap 装配 edit 插件 + overlay 根渲染，双端手工验证新建/编辑/删除落盘
+- [x] 3.7 双壳接线：bootstrap 装配 edit 插件 + overlay 根渲染，双端手工验证新建/编辑/删除落盘
 
 ## 4. plugin-display（海报墙 + 记录 tab）
 
@@ -29,14 +29,14 @@
 - [x] 4.4 headed：空态视图 + 「记录第一部影片」CTA（命令缺失时隐藏）
 - [x] 4.5 headed：只读详情（移动底部弹层/桌面居中卡片分支），注册 `cmd:record-detail`，动作按钮转发 edit 命令（缺失隐藏）
 - [x] 4.6 「海报墙/时间线」segmented 切换骨架：拉取 `ui:view:timeline`，未注册隐藏切换 + dev warn
-- [ ] 4.7 headless 单测 + 双壳手工验证（空态→录入→卡片出现；事件失效刷新）
+- [x] 4.7 headless 单测 + 双壳手工验证（空态→录入→卡片出现；事件失效刷新）
 
 ## 5. plugin-timeline（时间线视图）
 
 - [x] 5.1 `packages/plugin-timeline` 骨架（同上模式）
 - [x] 5.2 headless：投影接入 + 按月分组倒序 selector（episode 徽标文本、评分摘要含未评分语义）
 - [x] 5.3 headed：时间线组件（色卡缩略、标题、SxxExx 徽标、日期、评分摘要），条目点击转发 `cmd:record-detail`（缺失降级不可点）
-- [ ] 5.4 headless 单测（分组/排序/徽标/未评分）+ 接入 display 切换后双壳手工验证；验证 optional 卸载后回退海报墙
+- [x] 5.4 headless 单测（分组/排序/徽标/未评分）+ 接入 display 切换后双壳手工验证；验证 optional 卸载后回退海报墙
 
 ## 6. plugin-record（日历热力图）
 
@@ -44,11 +44,11 @@
 - [x] 6.2 headless：`bucketByDay` 日聚合 + 强度分级（0/1/2/3–4/≥5 五档）+ `buildYearGrid`（周一首列、闰年、不完整首尾周）+ 年份范围 selector
 - [x] 6.3 headless 单测（纯 Node）：闰年、当日多条聚合、空年份、年份范围边界
 - [x] 6.4 headed：热力图渲染（移动横滚 ScrollView / 桌面整年平铺分支）+ 点选日期当日记录面板（条目转发 detail/edit 命令，缺失降级）+ 年份切换器
-- [ ] 6.5 双壳手工验证：新增记录当日格子即时着色、跨年切换、点选日期闭环到编辑
+- [x] 6.5 双壳手工验证：新增记录当日格子即时着色、跨年切换、点选日期闭环到编辑
 
 ## 7. 壳收尾与 CI 守卫
 
 - [x] 7.1 移除壳内 records/calendar 占位内容（保留 profile 占位），确认 read tab 无提供者时隐藏且 dev 警告正常
 - [x] 7.2 CI 依赖方向守卫扩展：plugin-* → 仅 core + ui-contracts（+ui-nav）；插件间/对 platform-*、apps 的依赖违规即失败；react 系仍禁入 core
 - [x] 7.3 CI 接入四个插件包与 ui-contracts 的 lint/typecheck/test；全仓 typecheck 通过（moduleSuffixes 一致）
-- [ ] 7.4 双端冒烟清单跑通：移动端 + 桌面端完成「新建 → 海报墙 → 详情 → 编辑 → 时间线 → 日历着色 → 删除」全闭环，数据重启后仍在
+- [x] 7.4 双端冒烟清单跑通：移动端 + 桌面端完成「新建 → 海报墙 → 详情 → 编辑 → 时间线 → 日历着色 → 删除」全闭环，数据重启后仍在
