@@ -47,26 +47,39 @@ export function createRecordsTab(
           <EmptyState openEditor={openEditor} />
         ) : (
           <>
-            {timeline ? (
-              <View style={styles.segment}>
-                {(
-                  [
-                    ["poster", "海报墙"],
-                    ["timeline", "时间线"],
-                  ] as const
-                ).map(([id, label]) => (
-                  <Pressable
-                    key={id}
-                    onPress={() => setView(id)}
-                    style={[styles.segItem, view === id && styles.segActive]}
-                  >
-                    <Text style={[styles.segText, view === id && styles.segTextActive]}>
-                      {label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
+            <View style={styles.header}>
+              {timeline ? (
+                <View style={styles.segment}>
+                  {(
+                    [
+                      ["poster", "海报墙"],
+                      ["timeline", "时间线"],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <Pressable
+                      key={id}
+                      onPress={() => setView(id)}
+                      style={[styles.segItem, view === id && styles.segActive]}
+                    >
+                      <Text style={[styles.segText, view === id && styles.segTextActive]}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.headerSpacer} />
+              )}
+              {openEditor ? (
+                <Pressable
+                  style={styles.addButton}
+                  onPress={() => openEditor()}
+                  accessibilityLabel="记录观影"
+                >
+                  <Text style={styles.addButtonText}>＋ 记录</Text>
+                </Pressable>
+              ) : null}
+            </View>
             {view === "poster" ? (
               <PosterWall records={records} capabilities={capabilities} />
             ) : timeline ? (
@@ -99,12 +112,26 @@ function EmptyState({ openEditor }: { openEditor: RecordEditCommand | undefined 
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  headerSpacer: { flex: 1 },
   segment: {
     flexDirection: "row",
     gap: spacing.xs,
-    padding: spacing.sm,
-    alignSelf: "center",
+    flex: 1,
+    justifyContent: "center",
   },
+  addButton: {
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
+  addButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: fontWeight.semibold as never },
   segItem: {
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.lg,
