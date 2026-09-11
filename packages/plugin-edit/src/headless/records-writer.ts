@@ -8,10 +8,12 @@ import {
   COLLECTIONS,
   RECORD_SCHEMA_VERSION,
   type EventBus,
+  type RecordSource,
   type MovieRecord,
   type Storage,
 } from "@auktake/core";
 import { RECORD_EVENTS, type RecordEventPayload } from "@auktake/ui-contracts";
+import type { TmdbSnapshot } from "@auktake/core";
 import type { ValidatedDraft } from "./validation";
 
 export interface RecordsWriterDeps {
@@ -71,14 +73,64 @@ export function applyDraftToRecord(
   timestamp: string,
 ): MovieRecord {
   const base = buildManualSnapshot(draft, record.id, timestamp);
+  const merged = mergeTmdb(
+    base,
+    record,
+    // plain edit (no staged snapshot, no explicit unbind): keep binding
+    record.tmdb.id > 0 ? { keep: true } : { keep: false },
+  );
   return {
-    ...base,
+    ...merged,
     // identity fields MUST survive an edit (spec: 编辑保持身份)
     createdAt: record.createdAt,
     // non-manual origins keep their source; manual edits stay manual
-    source: record.source.type === "manual" ? { type: "manual" } : record.source,
+    source:
+      record.source.type === "manual"
+        ? ({ type: "manual" } as RecordSource)
+        : record.source,
     mediaCache: record.mediaCache,
     share: record.share,
+  };
+}
+
+interface TmdbMergeDirective {
+  readonly keep: boolean;
+  readonly snapshot?: TmdbSnapshot;
+  readonly unbind?: boolean;
+}
+
+/**
+ * TMDB snapshot merge semantics (Phase 2 spec):
+ * - staged snapshot (search binding) -> fully replaces sentinel/manual tmdb
+ * - keep (bound record, plain edit) -> tmdb survives untouched
+ * - unbind -> falls back to manual sentinel values (tmdb.id = 0)
+ */
+export function mergeTmdb(
+  base: MovieRecord,
+  previous: Pick<MovieRecord, "tmdb">,
+  directive: TmdbMergeDirective,
+): MovieRecord {
+  if (directive.snapshot) {
+    return { ...base, tmdb: directive.snapshot };
+  }
+  if (directive.keep) {
+    return { ...base, tmdb: previous.tmdb };
+  }
+  return base; // manual (sentinel or explicitly unbound)
+}
+
+/** Direct snapshot application for cmd:record-apply-tmdb (backfill). */
+export function applyTmdbSnapshotToRecord(
+  record: MovieRecord,
+  snapshot: TmdbSnapshot,
+  timestamp: string,
+): MovieRecord {
+  return {
+    ...record,
+    tmdb: snapshot,
+    // mediaCache from a previous binding may reference stale art
+    mediaCache: {},
+    updatedAt: timestamp,
   };
 }
 
@@ -97,25 +149,69 @@ export class RecordsWriter {
     return (await this.loadAll()).find((r) => r.id === id);
   }
 
-  async create(draft: ValidatedDraft): Promise<MovieRecord> {
+  async create(draft: ValidatedDraft, staged?: TmdbSnapshot): Promise<MovieRecord> {
     const records = await this.loadAll();
-    const record = buildManualSnapshot(draft, this.deps.generateId(), this.deps.now());
+    const manual = buildManualSnapshot(draft, this.deps.generateId(), this.deps.now());
+    const record = staged ? { ...manual, tmdb: staged } : manual;
     await this.deps.storage.persistAll(COLLECTIONS.records, [...records, record]);
     this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.created, { id: record.id });
     return record;
   }
 
-  async update(id: string, draft: ValidatedDraft): Promise<MovieRecord | undefined> {
+  async update(
+    id: string,
+    draft: ValidatedDraft,
+    tmdbDirective?: TmdbMergeDirective,
+  ): Promise<MovieRecord | undefined> {
     const records = await this.loadAll();
     const index = records.findIndex((r) => r.id === id);
     const existing = records[index];
     if (index < 0 || !existing) return undefined;
-    const updated = applyDraftToRecord(existing, draft, this.deps.now());
+    const base = buildManualSnapshot(draft, existing.id, this.deps.now());
+    const merged = mergeTmdb(base, existing, tmdbDirective ?? { keep: existing.tmdb.id > 0 });
+    const updated = {
+      ...merged,
+      createdAt: existing.createdAt,
+      source: existing.source.type === "manual" ? ({ type: "manual" } as RecordSource) : existing.source,
+      mediaCache: tmdbDirective?.snapshot ? {} : existing.mediaCache,
+      share: existing.share,
+    };
     const next = [...records];
     next[index] = updated;
     await this.deps.storage.persistAll(COLLECTIONS.records, next);
     this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.updated, { id });
     return updated;
+  }
+
+  /** cmd:record-apply-tmdb: replace ONLY the tmdb snapshot (backfill). */
+  async applyTmdb(id: string, snapshot: TmdbSnapshot): Promise<MovieRecord | undefined> {
+    const records = await this.loadAll();
+    const index = records.findIndex((r) => r.id === id);
+    const existing = records[index];
+    if (index < 0 || !existing) return undefined;
+    const next = [...records];
+    next[index] = applyTmdbSnapshotToRecord(existing, snapshot, this.deps.now());
+    await this.deps.storage.persistAll(COLLECTIONS.records, next);
+    this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.updated, { id });
+    return next[index];
+  }
+
+  /** Warm mediaCache.poster from the image cache (desktop; fire-and-forget). */
+  async warmMediaCache(
+    id: string,
+    posterPath: string,
+    resolve: (url: string) => Promise<string | null>,
+  ): Promise<void> {
+    const local = await resolve(posterPath);
+    if (local === null) return;
+    const records = await this.loadAll();
+    const index = records.findIndex((r) => r.id === id);
+    const existing = records[index];
+    if (index < 0 || !existing || existing.mediaCache.poster === local) return;
+    const next = [...records];
+    next[index] = { ...existing, mediaCache: { ...existing.mediaCache, poster: local } };
+    await this.deps.storage.persistAll(COLLECTIONS.records, next);
+    this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.updated, { id });
   }
 
   async remove(id: string): Promise<boolean> {

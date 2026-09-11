@@ -47,6 +47,49 @@ export function episodeBadge(record: MovieRecord): string {
   return `S${s}E${e}`;
 }
 
+/** Sync poster plan: what the card CAN resolve without async work. */
+export interface PosterPlan {
+  /** mediaCache.poster — already a renderable URI when present. */
+  readonly cachedPoster: string | null;
+  /** tmdb.posterPath — needs URL build + (optional) cache resolution. */
+  readonly posterPath: string;
+}
+
+export function posterPlan(record: MovieRecord): PosterPlan {
+  return {
+    cachedPoster: record.mediaCache.poster && record.mediaCache.poster.length > 0
+      ? record.mediaCache.poster
+      : null,
+    posterPath: record.tmdb.posterPath,
+  };
+}
+
+/**
+ * Async card source: cached URI -> image-cache-resolved URI -> remote
+ * URL (direct) -> palette. Cache service optional (mobile/absent).
+ * Pure headless — resolver injected, Node-testable.
+ */
+export async function resolveCardSource(
+  record: MovieRecord,
+  imageUrlFor: (posterPath: string) => string | null,
+  imageCache?: { resolve(url: string): Promise<string | null> },
+): Promise<
+  | { readonly kind: "image"; readonly uri: string }
+  | { readonly kind: "palette" }
+> {
+  const plan = posterPlan(record);
+  if (plan.cachedPoster) return { kind: "image", uri: plan.cachedPoster };
+  const url = imageUrlFor(plan.posterPath);
+  if (url) {
+    if (imageCache) {
+      const local = await imageCache.resolve(url);
+      if (local) return { kind: "image", uri: local };
+    }
+    return { kind: "image", uri: url }; // remote direct fallback
+  }
+  return { kind: "palette" };
+}
+
 /** Year text for the color card, from releaseDate when present. */
 export function releaseYear(record: MovieRecord): string {
   const year = record.tmdb.releaseDate.slice(0, 4);

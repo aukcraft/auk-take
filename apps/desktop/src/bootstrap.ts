@@ -6,12 +6,14 @@ import {
   type ConnectionStore,
   type PluginContext,
 } from "@auktake/core";
-import { createTauriStorage } from "@auktake/platform-tauri";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { createTauriBinaryFs, createTauriStorage } from "@auktake/platform-tauri";
 import { createDisplayPlugin } from "@auktake/plugin-display";
 import { createEditPlugin } from "@auktake/plugin-edit";
 import { createRecordPlugin } from "@auktake/plugin-record";
 import { createTimelinePlugin } from "@auktake/plugin-timeline";
-import type { PluginRuntimeDeps } from "@auktake/ui-contracts";
+import { createTmdbPlugin } from "@auktake/plugin-tmdb";
+import { FS_SERVICE, type PluginRuntimeDeps } from "@auktake/ui-contracts";
 
 /**
  * Desktop composition root (design D1): init core -> inject Tauri
@@ -48,6 +50,8 @@ export interface AppRuntime {
 export function createRuntime(dev: boolean): AppRuntime {
   const services = new ServiceRegistry();
   services.register("storage", createTauriStorage(DATA_FILE));
+  // Binary fs for the poster image cache (mobile registers none).
+  services.register(FS_SERVICE, createTauriBinaryFs());
 
   const events = new EventBus();
   const capabilities = new CapabilityRegistry();
@@ -58,6 +62,14 @@ export function createRuntime(dev: boolean): AppRuntime {
   manager.register(createDisplayPlugin(deps));
   manager.register(createRecordPlugin(deps));
   manager.register(createTimelinePlugin(deps));
+  // recommended tier: TMDB metadata (built-in key + user override).
+  manager.register(
+    createTmdbPlugin(deps, {
+      cacheDir: "poster-cache",
+      // local cache files render via the Tauri asset protocol
+      toRenderUri: (path) => convertFileSrc(path),
+    }),
+  );
 
   const pluginContext = (pluginId: string): PluginContext => ({
     pluginId,

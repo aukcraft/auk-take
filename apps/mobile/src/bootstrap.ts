@@ -11,6 +11,7 @@ import { createDisplayPlugin } from "@auktake/plugin-display";
 import { createEditPlugin } from "@auktake/plugin-edit";
 import { createRecordPlugin } from "@auktake/plugin-record";
 import { createTimelinePlugin } from "@auktake/plugin-timeline";
+import { createTmdbPlugin } from "@auktake/plugin-tmdb";
 import type { PluginRuntimeDeps } from "@auktake/ui-contracts";
 
 /**
@@ -53,6 +54,8 @@ export function createRuntime(): AppRuntime {
   manager.register(createDisplayPlugin(deps));
   manager.register(createRecordPlugin(deps));
   manager.register(createTimelinePlugin(deps));
+  // recommended tier: search/binding + remote-direct images (no fs port).
+  manager.register(createTmdbPlugin(deps));
 
   const pluginContext = (pluginId: string): PluginContext => ({
     pluginId,

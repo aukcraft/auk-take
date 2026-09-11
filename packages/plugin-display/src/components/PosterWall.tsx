@@ -9,6 +9,7 @@
 import React, { useMemo } from "react";
 import {
   FlatList,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,14 +20,18 @@ import {
 import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import {
   CAPABILITY_KEYS,
+  IMAGE_CACHE_SERVICE,
   POSTER_PALETTE,
   colorHash,
   colors,
   fontWeight,
   radius,
   spacing,
+  tmdbImageUrl,
+  type ImageCacheService,
   type RecordDetailCommand,
 } from "@auktake/ui-contracts";
+import { resolveCardSource } from "../headless/selectors";
 import {
   episodeBadge,
   ratingLabel,
@@ -68,10 +73,27 @@ function ColorCard({ record }: { record: MovieRecord }) {
 function Card({
   record,
   openDetail,
+  imageCache,
 }: {
   record: MovieRecord;
   openDetail: RecordDetailCommand | undefined;
+  imageCache: ImageCacheService | undefined;
 }) {
+  const [uri, setUri] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let alive = true;
+    resolveCardSource(record, tmdbImageUrl, imageCache)
+      .then((source) => {
+        if (alive) setUri(source.kind === "image" ? source.uri : null);
+      })
+      .catch(() => {
+        if (alive) setUri(null); // any failure -> color card
+      });
+    return () => {
+      alive = false;
+    };
+  }, [record, imageCache]);
+
   const pressable = openDetail !== undefined;
   const Wrapper = pressable ? Pressable : View;
   return (
@@ -80,10 +102,14 @@ function Card({
       onPress={pressable ? () => openDetail?.(record.id) : undefined}
       disabled={!pressable}
     >
-      {/* resolvePosterSource(record): Phase 2 renders image branches
-          (mediaCache.poster → tmdb.posterPath) here; Phase 1 data
-          always falls through to the deterministic color card. */}
-      <ColorCard record={record} />
+      {/* Three-tier pipeline (spec): cached image -> remote via cache
+          -> deterministic color card. Color card renders immediately,
+          the image swaps in once resolved. */}
+      {uri ? (
+        <Image source={{ uri }} style={styles.cardImage} />
+      ) : (
+        <ColorCard record={record} />
+      )}
       <Text style={styles.badgeLine} numberOfLines={1}>
         {episodeBadge(record) || (record.tmdb.mediaType === "movie" ? "电影" : "剧集")}
         {" · "}
@@ -106,6 +132,7 @@ export function PosterWall({
     [width],
   );
   const openDetail = capabilities.get<RecordDetailCommand>(CAPABILITY_KEYS.recordDetail);
+  const imageCache = capabilities.get<ImageCacheService>(IMAGE_CACHE_SERVICE);
   const sorted = useMemo(() => sortByWatchedAtDesc(records), [records]);
   const rows = useMemo(() => chunk(sorted, columns), [sorted, columns]);
 
@@ -119,7 +146,7 @@ export function PosterWall({
       renderItem={({ item: row }) => (
         <View style={styles.row}>
           {row.map((record) => (
-            <Card key={record.id} record={record} openDetail={openDetail} />
+            <Card key={record.id} record={record} openDetail={openDetail} imageCache={imageCache} />
           ))}
           {/* pad the trailing incomplete row so cells keep equal width */}
           {Array.from({ length: columns - row.length }, (_, i) => (
@@ -137,6 +164,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: spacing.sm },
   cell: { flex: 1, gap: spacing.xs },
   cellPad: { flex: 1 },
+  cardImage: {
+    aspectRatio: 2 / 3,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
   card: {
     aspectRatio: 2 / 3,
     borderRadius: radius.md,

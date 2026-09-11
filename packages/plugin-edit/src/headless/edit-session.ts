@@ -4,7 +4,7 @@
  * The overlay UI subscribes to this store; all transitions are pure
  * state updates (no I/O) so behavior is Node-testable.
  */
-import type { MovieRecord } from "@auktake/core";
+import type { MovieRecord, TmdbSnapshot } from "@auktake/core";
 import { draftFromRecord, emptyDraft, type EditorDraft, type FieldErrors } from "./validation";
 
 export type EditStatus = "closed" | "editing" | "submitting";
@@ -22,6 +22,10 @@ export interface EditSessionState {
   readonly errors: FieldErrors;
   /** Form-level error (e.g. storage write failure). null = none. */
   readonly formError: string | null;
+  /** Phase 2: TMDB snapshot staged from a picked candidate (null = manual). */
+  readonly pendingTmdb: TmdbSnapshot | null;
+  /** True when the user explicitly unbound an existing TMDB snapshot. */
+  readonly unbound: boolean;
   readonly deletePrompt: DeletePrompt | null;
 }
 
@@ -31,6 +35,8 @@ const CLOSED: EditSessionState = {
   draft: emptyDraft(""),
   errors: {},
   formError: null,
+  pendingTmdb: null,
+  unbound: false,
   deletePrompt: null,
 };
 
@@ -57,6 +63,8 @@ export class EditSessionController {
       draft: emptyDraft(defaultWatchedAt),
       errors: {},
       formError: null,
+      pendingTmdb: null,
+      unbound: false,
       deletePrompt: null,
     });
   }
@@ -69,6 +77,8 @@ export class EditSessionController {
       draft: draftFromRecord(record),
       errors: {},
       formError: null,
+      pendingTmdb: record.tmdb.id > 0 ? record.tmdb : null,
+      unbound: false,
       deletePrompt: null,
     });
   }
@@ -121,6 +131,19 @@ export class EditSessionController {
   clearFormError(): void {
     if (this.state.formError === null) return;
     this.transition({ ...this.state, formError: null });
+  }
+
+
+  /** Stage a TMDB snapshot picked in the search flow (Phase 2). */
+  setPendingTmdb(snapshot: TmdbSnapshot): void {
+    if (this.state.status === "closed") return;
+    this.transition({ ...this.state, pendingTmdb: snapshot, unbound: false });
+  }
+
+  /** Explicitly unbind: saving falls back to manual sentinel semantics. */
+  unbindTmdb(): void {
+    if (this.state.status === "closed") return;
+    this.transition({ ...this.state, pendingTmdb: null, unbound: true });
   }
 
   /** Second-confirmation prompt for deletion (spec: 删除二次确认). */

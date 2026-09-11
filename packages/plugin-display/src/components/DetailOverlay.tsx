@@ -92,6 +92,9 @@ export function createDetailOverlay(
 
     const openEditor = capabilities.get<RecordEditCommand>(CAPABILITY_KEYS.recordEdit);
     const requestDelete = capabilities.get<RecordDeleteCommand>(CAPABILITY_KEYS.recordDelete);
+    const runBackfill = capabilities.get<(recordId: string) => Promise<unknown>>(
+      CAPABILITY_KEYS.tmdbBackfill,
+    );
 
     return (
       <Modal
@@ -123,6 +126,25 @@ export function createDetailOverlay(
                 />
                 <FieldRow label="观看日期" value={record.user.watchedAt} />
                 <FieldRow label="评分" value={ratingLabel(record)} />
+                {record.tmdb.id > 0 ? (
+                  <View style={styles.metaBox}>
+                    {record.tmdb.genres.length > 0 ? (
+                      <FieldRow label="类型标签" value={record.tmdb.genres.map((g) => g.name).join(" / ")} />
+                    ) : null}
+                    {record.tmdb.runtime > 0 ? (
+                      <FieldRow label="片长" value={`${record.tmdb.runtime} 分钟`} />
+                    ) : null}
+                    {record.tmdb.releaseDate.length > 0 ? (
+                      <FieldRow label="上映日期" value={record.tmdb.releaseDate} />
+                    ) : null}
+                    {record.tmdb.overview.length > 0 ? (
+                      <View style={styles.reviewBox}>
+                        <Text style={styles.fieldLabel}>简介</Text>
+                        <Text style={styles.reviewText}>{record.tmdb.overview}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
                 {record.user.review.length > 0 ? (
                   <View style={styles.reviewBox}>
                     <Text style={styles.fieldLabel}>观后感</Text>
@@ -134,6 +156,17 @@ export function createDetailOverlay(
                 <Pressable style={styles.closeButton} onPress={() => store.close()}>
                   <Text style={styles.closeText}>关闭</Text>
                 </Pressable>
+                {record.tmdb.id === 0 && runBackfill ? (
+                  <Pressable
+                    style={[styles.actionButton, styles.backfillButton]}
+                    onPress={() => {
+                      store.close();
+                      void runBackfill(record.id);
+                    }}
+                  >
+                    <Text style={styles.actionText}>补全元数据</Text>
+                  </Pressable>
+                ) : null}
                 {openEditor ? (
                   <Pressable
                     style={styles.actionButton}
@@ -203,5 +236,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   deleteButton: { backgroundColor: colors.danger },
+  backfillButton: { backgroundColor: "#3F6E5A" },
+  metaBox: { gap: spacing.md },
   actionText: { color: "#FFFFFF", fontWeight: fontWeight.semibold as never },
 });

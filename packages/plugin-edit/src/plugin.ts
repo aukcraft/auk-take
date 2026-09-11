@@ -6,7 +6,9 @@ import type { AukPlugin, Storage } from "@auktake/core";
 import { ulid } from "ulid";
 import {
   CAPABILITY_KEYS,
+  IMAGE_CACHE_SERVICE,
   STORAGE_SERVICE,
+  tmdbImageUrl,
   type PluginRuntimeDeps,
   type RecordDeleteCommand,
   type RecordEditCommand,
@@ -73,11 +75,23 @@ export function createEditPlugin(deps: PluginRuntimeDeps): AukPlugin {
 
       deps.capabilities.register(CAPABILITY_KEYS.recordEdit, openEdit);
       deps.capabilities.register(CAPABILITY_KEYS.recordDelete, requestDelete);
+      // Phase 2 internal channel: snapshot-only merge for the backfill flow.
+      deps.capabilities.register(CAPABILITY_KEYS.recordApplyTmdb, (recordId: string, snapshot: import("@auktake/core").TmdbSnapshot) =>
+        writer.applyTmdb(recordId, snapshot).then((r) => {
+          if (!r && deps.dev) console.warn(`[edit] applyTmdb: record "${recordId}" not found`);
+        }),
+      );
+      // Poster warm-up through the image cache when available (desktop).
+      const imageCache = deps.services.get<import("@auktake/ui-contracts").ImageCacheService>(IMAGE_CACHE_SERVICE);
+      const warmPoster = (recordId: string, posterPath: string): void => {
+        const url = tmdbImageUrl(posterPath);
+        if (imageCache && url) void writer.warmMediaCache(recordId, url, (u) => imageCache.resolve(u));
+      };
       // The overlay contract is prop-free: the component closes over
       // the session/writer created here (design D8).
       deps.capabilities.register(
         CAPABILITY_KEYS.overlayRoot,
-        createEditOverlay(session, writer),
+        createEditOverlay(session, writer, warmPoster, deps.capabilities, imageCache),
       );
 
       return {
@@ -86,6 +100,7 @@ export function createEditPlugin(deps: PluginRuntimeDeps): AukPlugin {
         dispose() {
           deps.capabilities.unregister(CAPABILITY_KEYS.recordEdit);
           deps.capabilities.unregister(CAPABILITY_KEYS.recordDelete);
+          deps.capabilities.unregister(CAPABILITY_KEYS.recordApplyTmdb);
           deps.capabilities.unregister(CAPABILITY_KEYS.overlayRoot);
         },
       };

@@ -16,7 +16,17 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { colors, fontWeight, radius, spacing } from "@auktake/ui-contracts";
+import type { TmdbSnapshot } from "@auktake/core";
+import {
+  CAPABILITY_KEYS,
+  colors,
+  fontWeight,
+  radius,
+  spacing,
+  type ImageCacheService,
+  type TmdbCandidate,
+  type TmdbCandidateSnapshotCommand,
+} from "@auktake/ui-contracts";
 import type { EditSessionController } from "../headless/edit-session";
 import type { RecordsWriter } from "../headless/records-writer";
 import { parseDraft, validateDraft } from "../headless/validation";
@@ -40,12 +50,24 @@ function Field({ label, error, children }: FieldProps) {
 export function createEditOverlay(
   session: EditSessionController,
   writer: RecordsWriter,
+  warmPoster: (recordId: string, posterPath: string) => void,
+  capabilities?: { get: <T>(key: string) => T | undefined },
+  _imageCache?: ImageCacheService,
 ): React.ComponentType {
   return function EditOverlay() {
     const state = useSyncExternalStore(
       session.subscribe.bind(session),
       session.getState.bind(session),
     );
+    const [searchText, setSearchText] = React.useState("");
+    const [candidates, setCandidates] = React.useState<TmdbCandidate[]>([]);
+    const [searching, setSearching] = React.useState(false);
+
+    const search = capabilities?.get<TmdbCandidateSnapshotCommand>(CAPABILITY_KEYS.tmdbCandidateSnapshot);
+    // search capability resolution: tmdb plugin exports cmd:tmdb-search
+    const tmdbSearch = capabilities?.get<
+      (q: string, o?: { mediaType?: "movie" | "episode" }) => Promise<TmdbCandidate[]>
+    >(CAPABILITY_KEYS.tmdbSearch);
 
     const save = async (): Promise<void> => {
       const errors = validateDraft(state.draft);
@@ -56,11 +78,21 @@ export function createEditOverlay(
       session.beginSubmit();
       try {
         const draft = parseDraft(state.draft);
+        const directive = state.unbound
+          ? { keep: false, unbind: true }
+          : state.pendingTmdb
+            ? { keep: false, snapshot: state.pendingTmdb }
+            : undefined;
+        let savedId: string | undefined;
         if (state.editingId) {
-          await writer.update(state.editingId, draft);
+          const updated = await writer.update(state.editingId, draft, directive);
+          savedId = updated?.id;
         } else {
-          await writer.create(draft);
+          const created = await writer.create(draft, state.pendingTmdb ?? undefined);
+          savedId = created.id;
         }
+        const poster = (state.unbound ? "" : state.pendingTmdb?.posterPath) ?? "";
+        if (savedId && poster) warmPoster(savedId, poster);
         session.close();
       } catch (error) {
         // Storage/persist failure MUST be visible, never a silent close.
@@ -92,6 +124,82 @@ export function createEditOverlay(
                 {state.editingId ? "编辑记录" : "记录观影"}
               </Text>
               <ScrollView style={styles.form}>
+                {tmdbSearch && !state.unbound ? (
+                  <View style={styles.tmdbBox}>
+                    {state.pendingTmdb ? (
+                      <View style={styles.boundRow}>
+                        <Text style={styles.boundText} numberOfLines={1}>
+                          TMDB 已绑定：{state.pendingTmdb.title}
+                          {state.pendingTmdb.releaseDate
+                            ? ` (${state.pendingTmdb.releaseDate.slice(0, 4)})`
+                            : ""}
+                        </Text>
+                        <Pressable style={styles.unbind} onPress={() => session.unbindTmdb()}>
+                          <Text style={styles.unbindText}>解绑</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <>
+                        <View style={styles.searchRow}>
+                          <TextInput
+                            style={styles.searchInput}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                            placeholder="搜索 TMDB 绑定元数据（可选）"
+                            placeholderTextColor={colors.textMuted}
+                          />
+                          <Pressable
+                            style={[styles.searchBtn, searching && { opacity: 0.6 }]}
+                            disabled={searching || searchText.trim().length === 0}
+                            onPress={async () => {
+                              setSearching(true);
+                              try {
+                                const found = await tmdbSearch?.(searchText.trim(), {
+                                  mediaType: state.draft.mediaType,
+                                });
+                                setCandidates(found ?? []);
+                              } finally {
+                                setSearching(false);
+                              }
+                            }}
+                          >
+                            <Text style={styles.searchBtnText}>
+                              {searching ? "…" : "搜索"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        {candidates.map((c) => (
+                          <Pressable
+                            key={`${c.tmdbId}-${c.mediaType}`}
+                            style={styles.candidate}
+                            onPress={async () => {
+                              if (!search) return;
+                              const episode =
+                                state.draft.mediaType === "episode"
+                                  ? {
+                                      season: Number(state.draft.seasonNumber) || 1,
+                                      episode: Number(state.draft.episodeNumber) || 1,
+                                    }
+                                  : undefined;
+                              const snapshot: TmdbSnapshot = await search(c, episode);
+                              session.setPendingTmdb(snapshot);
+                              setCandidates([]);
+                            }}
+                          >
+                            <Text style={styles.candidateTitle} numberOfLines={1}>
+                              {c.title}
+                            </Text>
+                            <Text style={styles.candidateMeta} numberOfLines={1}>
+                              {c.mediaType === "episode" ? "剧集" : "电影"}
+                              {c.releaseDate ? ` · ${c.releaseDate.slice(0, 4)}` : ""}
+                            </Text>
+                          </Pressable>
+                        ))}
+                        {candidates.length === 0 && searching === false && null}
+                      </>
+                    )}
+                  </View>
+                ) : null}
                 <Field label="标题" error={state.errors.title}>
                   <TextInput
                     {...inputProps}
@@ -253,6 +361,43 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   error: { fontSize: 12, color: colors.danger },
+  tmdbBox: { gap: spacing.xs, marginBottom: spacing.md },
+  boundRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    padding: spacing.sm + 2,
+  },
+  boundText: { flex: 1, fontSize: 13, color: colors.text },
+  unbind: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  unbindText: { color: colors.danger, fontSize: 13 },
+  searchRow: { flexDirection: "row", gap: spacing.sm },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    color: colors.text,
+    fontSize: 14,
+  },
+  searchBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+  },
+  searchBtnText: { color: "#FFFFFF", fontSize: 14 },
+  candidate: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    padding: spacing.sm + 2,
+  },
+  candidateTitle: { fontSize: 14, color: colors.text, fontWeight: fontWeight.medium as never },
+  candidateMeta: { fontSize: 12, color: colors.textMuted },
   formError: { fontSize: 13, color: colors.danger, textAlign: "center" },
   reviewInput: {
     backgroundColor: colors.surface,

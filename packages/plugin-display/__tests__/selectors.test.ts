@@ -6,6 +6,8 @@ import {
   episodeBadge,
   ratingLabel,
   releaseYear,
+  posterPlan,
+  resolveCardSource,
   resolvePosterSource,
   sortByWatchedAtDesc,
 } from "../src/headless/selectors";
@@ -126,5 +128,53 @@ describe("display projection integration", () => {
     await Promise.resolve();
     expect(projection.getState().map((r) => r.id)).toEqual(["new-1"]);
     projection.dispose();
+  });
+});
+
+describe("poster pipeline (Phase 2)", () => {
+  const urlFor = (p: string) => (p ? `https://image.tmdb.org/t/p/w500${p}` : null);
+
+  it("cached mediaCache.poster wins immediately", async () => {
+    const src = await resolveCardSource(
+      record({ id: "c", mediaCache: { poster: "asset://x.img" } }),
+      urlFor,
+    );
+    expect(src).toEqual({ kind: "image", uri: "asset://x.img" });
+  });
+
+  it("posterPath resolves through the image cache when present", async () => {
+    const cache = { resolve: async () => "asset://local.img" };
+    const src = await resolveCardSource(
+      record({ id: "p", tmdb: { ...record({ id: "p" }).tmdb, posterPath: "/a.jpg" } }),
+      urlFor,
+      cache,
+    );
+    expect(src).toEqual({ kind: "image", uri: "asset://local.img" });
+  });
+
+  it("falls back to the remote URL when cache misses or is absent", async () => {
+    const miss = { resolve: async () => null };
+    const src1 = await resolveCardSource(
+      record({ id: "p", tmdb: { ...record({ id: "p" }).tmdb, posterPath: "/a.jpg" } }),
+      urlFor,
+      miss,
+    );
+    expect(src1).toEqual({ kind: "image", uri: "https://image.tmdb.org/t/p/w500/a.jpg" });
+    const src2 = await resolveCardSource(
+      record({ id: "p", tmdb: { ...record({ id: "p" }).tmdb, posterPath: "/a.jpg" } }),
+      urlFor,
+    );
+    expect(src2).toEqual({ kind: "image", uri: "https://image.tmdb.org/t/p/w500/a.jpg" });
+  });
+
+  it("sentinel records fall through to the color card", async () => {
+    const src = await resolveCardSource(record({ id: "s" }), urlFor);
+    expect(src).toEqual({ kind: "palette" });
+  });
+
+  it("posterPlan is a pure sync projection", () => {
+    const plan = posterPlan(record({ id: "x", mediaCache: { poster: "p.img" } }));
+    expect(plan.cachedPoster).toBe("p.img");
+    expect(posterPlan(record({ id: "y" })).cachedPoster).toBeNull();
   });
 });

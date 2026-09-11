@@ -18,6 +18,7 @@
     "@auktake/plugin-edit": "workspace:*",
     "@auktake/plugin-record": "workspace:*",
     "@auktake/plugin-timeline": "workspace:*",
+    "@auktake/plugin-tmdb": "workspace:*",
     "@auktake/ui-contracts": "workspace:*",
     "@auktake/ui-nav": "workspace:*",
     "@tauri-apps/api": "^2.9.0",

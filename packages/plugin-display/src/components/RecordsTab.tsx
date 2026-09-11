@@ -40,6 +40,7 @@ export function createRecordsTab(
     }
 
     const openEditor = capabilities.get<RecordEditCommand>(CAPABILITY_KEYS.recordEdit);
+    const openTmdbConfig = capabilities.get<() => void>(CAPABILITY_KEYS.tmdbConfigure);
 
     return (
       <View style={styles.root}>
@@ -70,15 +71,26 @@ export function createRecordsTab(
               ) : (
                 <View style={styles.headerSpacer} />
               )}
-              {openEditor ? (
-                <Pressable
-                  style={styles.addButton}
-                  onPress={() => openEditor()}
-                  accessibilityLabel="记录观影"
-                >
-                  <Text style={styles.addButtonText}>＋ 记录</Text>
-                </Pressable>
-              ) : null}
+              <View style={styles.headerActions}>
+                {openTmdbConfig ? (
+                  <Pressable
+                    style={styles.gearButton}
+                    onPress={() => openTmdbConfig()}
+                    accessibilityLabel="TMDB 设置"
+                  >
+                    <Text style={styles.gearText}>TMDB</Text>
+                  </Pressable>
+                ) : null}
+                {openEditor ? (
+                  <Pressable
+                    style={styles.addButton}
+                    onPress={() => openEditor()}
+                    accessibilityLabel="记录观影"
+                  >
+                    <Text style={styles.addButtonText}>＋ 记录</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
             {view === "poster" ? (
               <PosterWall records={records} capabilities={capabilities} />
@@ -125,6 +137,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
+  headerActions: { flexDirection: "row", gap: spacing.sm },
+  gearButton: {
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  gearText: { color: colors.textMuted, fontSize: 13 },
   addButton: {
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.lg,

@@ -8,3 +8,4 @@ coverage/
 .env.*
 .tools/
 .gh-watch.log
+packages/plugin-tmdb/src/builtin-key.json

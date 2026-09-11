@@ -71,6 +71,7 @@ const allowed = {
   "packages/plugin-display": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-record": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-timeline": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-tmdb": ["@auktake/core", "@auktake/ui-contracts"],
 };
 
 const packageDirs = fs

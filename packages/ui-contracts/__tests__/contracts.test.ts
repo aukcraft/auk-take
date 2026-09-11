@@ -31,6 +31,7 @@ describe("constants", () => {
     expect(OVERLAY_KEYS).toEqual([
       CAPABILITY_KEYS.overlayRoot,
       CAPABILITY_KEYS.overlayRecordDetail,
+      CAPABILITY_KEYS.overlayTmdbBackfill,
     ]);
   });
 });
@@ -68,5 +69,29 @@ describe("design tokens", () => {
     expect(heatmapLevel(4)).toBe(3);
     expect(heatmapLevel(5)).toBe(4);
     expect(heatmapLevel(99)).toBe(4);
+  });
+});
+
+describe("phase-2 constants", () => {
+  it("new capability keys stay unique across the whole set", () => {
+    const keys = Object.values(CAPABILITY_KEYS);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("overlay list covers all three overlay keys", () => {
+    expect(OVERLAY_KEYS).toEqual([
+      CAPABILITY_KEYS.overlayRoot,
+      CAPABILITY_KEYS.overlayRecordDetail,
+      CAPABILITY_KEYS.overlayTmdbBackfill,
+    ]);
+  });
+});
+
+describe("tmdb helpers", () => {
+  it("tmdbImageUrl builds CDN urls, null for empty path", async () => {
+    const { tmdbImageUrl } = await import("../src/index");
+    expect(tmdbImageUrl("/abc.jpg")).toBe("https://image.tmdb.org/t/p/w500/abc.jpg");
+    expect(tmdbImageUrl("/abc.jpg", "w185")).toBe("https://image.tmdb.org/t/p/w185/abc.jpg");
+    expect(tmdbImageUrl("")).toBeNull();
   });
 });

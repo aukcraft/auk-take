@@ -20,6 +20,18 @@ export const CAPABILITY_KEYS = {
   overlayRoot: "ui:overlay:root",
   /** display plugin: global read-only detail overlay component. */
   overlayRecordDetail: "ui:overlay:record-detail",
+  /** tmdb plugin: search TMDB for candidates (Phase 2). */
+  tmdbSearch: "cmd:tmdb-search",
+  /** tmdb plugin: backfill one sentinel record (Phase 2). */
+  tmdbBackfill: "cmd:tmdb-backfill",
+  /** tmdb plugin: open the credential/language config dialog. */
+  tmdbConfigure: "cmd:tmdb-configure",
+  /** tmdb plugin: global backfill review overlay component. */
+  overlayTmdbBackfill: "ui:overlay:tmdb-backfill",
+  /** edit plugin (internal channel): merge a TMDB snapshot into a record. */
+  recordApplyTmdb: "cmd:record-apply-tmdb",
+  /** tmdb plugin: resolve a picked candidate into a full TmdbSnapshot. */
+  tmdbCandidateSnapshot: "cmd:tmdb-candidate-snapshot",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITY_KEYS)[keyof typeof CAPABILITY_KEYS];
@@ -32,6 +44,7 @@ export type CapabilityKey = (typeof CAPABILITY_KEYS)[keyof typeof CAPABILITY_KEY
 export const OVERLAY_KEYS: readonly CapabilityKey[] = [
   CAPABILITY_KEYS.overlayRoot,
   CAPABILITY_KEYS.overlayRecordDetail,
+  CAPABILITY_KEYS.overlayTmdbBackfill,
 ];
 
 /** Record collection change events published by the edit plugin (sole writer). */
@@ -50,3 +63,9 @@ export const RECORD_EVENT_NAMES: readonly string[] = [
 
 /** ServiceRegistry name under which both shells register the Storage port. */
 export const STORAGE_SERVICE = "storage";
+
+/** ServiceRegistry name for the poster image cache (optional, Phase 2). */
+export const IMAGE_CACHE_SERVICE = "svc:image-cache";
+
+/** ServiceRegistry name for a binary fs port (optional; desktop only). */
+export const FS_SERVICE = "fs";
