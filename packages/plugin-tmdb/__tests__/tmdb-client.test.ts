@@ -213,6 +213,24 @@ describe("normalizeConfig", () => {
     expect(kept.apiKey).toBe("v3key123");
   });
 
+  it("moves a 32-hex v3 key misplaced into the v4 field", async () => {
+    const { normalizeConfig } = await import("../src/headless/tmdb-service");
+    const v3 = "a".repeat(32);
+    const fixed = normalizeConfig({ apiKey: "", v4Token: v3, language: "zh-CN" });
+    expect(fixed.v4Token).toBe("");
+    expect(fixed.apiKey).toBe(v3);
+  });
+
+  it("strips internal whitespace from pasted tokens", async () => {
+    const { normalizeConfig } = await import("../src/headless/tmdb-service");
+    const fixed = normalizeConfig({
+      apiKey: "",
+      v4Token: "eyJ\nabc\n.def",
+      language: "zh-CN",
+    });
+    expect(fixed.v4Token).toBe("eyJabc.def");
+  });
+
   it("invalid-key now THROWS instead of silently returning []", async () => {
     const service = new TmdbService({
       storage: new InMemoryStorage(),

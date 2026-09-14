@@ -70,7 +70,7 @@ export function createTmdbOverlay(
           <View style={styles.overlay}>
             <View style={styles.card}>
               <Text style={styles.title}>TMDB 设置</Text>
-              <Text style={styles.label}>API Key v3（可选）</Text>
+              <Text style={styles.label}>API Key v3（可选，32 位十六进制）</Text>
               <TextInput
                 style={styles.input}
                 value={apiKey}
@@ -80,7 +80,7 @@ export function createTmdbOverlay(
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              <Text style={styles.label}>Read Access Token v4（推荐）</Text>
+              <Text style={styles.label}>Read Access Token v4（推荐，以 eyJ 开头的长串）</Text>
               <TextInput
                 style={styles.input}
                 value={v4Token}
@@ -91,7 +91,9 @@ export function createTmdbOverlay(
                 autoCorrect={false}
                 multiline
               />
-              <Text style={styles.hint}>凭证经本机加密后持久化，不会明文落盘。</Text>
+              <Text style={styles.hint}>
+                从 themoviedb.org/settings/api 的「API Read Access Token」完整复制（勿用 32 位 API Key）；填错框会自动归位。凭证经本机加密持久化。
+              </Text>
               <Text style={styles.label}>语言偏好</Text>
               <TextInput
                 style={styles.input}

@@ -17,13 +17,24 @@ import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto
 
 const CONFIG_ID = "tmdb-config";
 
-/** Auto-move misplaced v4 tokens (eyJ... = JWT-shaped) to the v4 slot. */
+/**
+ * Credential hygiene on save: strip ALL internal whitespace (pasted
+ * tokens wrap lines) and auto-move credentials pasted into the wrong
+ * slot — eyJ... (JWT v4 token) in the v3 field, and a bare 32-char hex
+ * v3 key in the v4 field both land correctly.
+ */
 export function normalizeConfig(config: TmdbConfig): TmdbConfig {
-  const looksV4 = (value: string) => value.startsWith("eyJ");
-  if (looksV4(config.apiKey) && !config.v4Token) {
-    return { apiKey: "", v4Token: config.apiKey, language: config.language };
+  const clean = (value: string | undefined) => (value ?? "").replace(/\s+/g, "");
+  let apiKey = clean(config.apiKey);
+  let v4Token = clean(config.v4Token);
+  if (apiKey.startsWith("eyJ")) {
+    if (!v4Token) v4Token = apiKey;
+    apiKey = "";
+  } else if (v4Token && !v4Token.startsWith("eyJ") && /^[0-9a-f]{32}$/.test(v4Token)) {
+    if (!apiKey) apiKey = v4Token;
+    v4Token = "";
   }
-  return config;
+  return { apiKey, v4Token, language: config.language };
 }
 
 interface StoredConfig {

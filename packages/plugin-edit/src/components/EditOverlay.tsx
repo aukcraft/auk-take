@@ -179,7 +179,7 @@ export function createEditOverlay(
                                 const kind = (error as { kind?: string })?.kind;
                                 const detail =
                                   kind === "invalid-key"
-                                    ? "凭证被拒绝（401），请检查 TMDB 设置中的令牌"
+                                    ? "凭证被拒绝（401）：v4 令牌应以 eyJ 开头且完整（注意区分 API Key 与 Read Access Token），请到 TMDB 设置重新粘贴"
                                     : kind === "network"
                                       ? "网络错误：无法访问 api.themoviedb.org"
                                       : kind === "upstream"
