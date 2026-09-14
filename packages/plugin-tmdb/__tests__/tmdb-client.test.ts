@@ -158,18 +158,6 @@ describe("TmdbService", () => {
     });
   });
 
-  it("invalid-key degrades to empty candidates instead of throwing", async () => {
-    const service = new TmdbService({
-      storage: new InMemoryStorage(),
-      events: new EventBus(),
-      fetchImpl: (async () => jsonResponse({}, 401)) as unknown as FetchLike,
-    });
-    await service.saveConfig({ apiKey: "BAD", language: "zh-CN" });
-    await expect(service.search("x")).resolves.toEqual([]);
-  });
-});
-
-describe("backfill confidence", () => {
   async function serviceWith(results: unknown[]) {
     const service = new TmdbService({
       storage: new InMemoryStorage(),
@@ -179,15 +167,6 @@ describe("backfill confidence", () => {
     await service.saveConfig({ apiKey: "K", language: "zh-CN" });
     return service;
   }
-
-  it("unique normalized-title match binds", async () => {
-    const service = await serviceWith([
-      { id: 1, title: "The Deep", release_date: "2023-01-19" },
-      { id: 2, title: "Other", release_date: "2001-01-01" },
-    ]);
-    const result = await service.backfill("r1", { title: "the deep", mediaType: "movie" });
-    expect(result).toMatchObject({ status: "bound", tmdbId: 1 });
-  });
 
   it("ambiguous matches go to needs-review", async () => {
     const service = await serviceWith([

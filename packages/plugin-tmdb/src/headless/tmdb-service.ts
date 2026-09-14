@@ -141,17 +141,13 @@ export class TmdbService {
     if (!this.configured) return [];
     const client = this.client();
     const mediaType = options?.mediaType ?? "movie";
-    try {
-      const raw =
-        mediaType === "episode"
-          ? await client.searchTv(query)
-          : await client.searchMovie(query);
-      return raw.map((item) => mapCandidate(item, mediaType));
-    } catch (error) {
-      // 401 MUST surface (a swallowed invalid key used to render as
-      // "no results", hiding credential problems)
-      throw error;
-    }
+    // Errors (incl. 401 invalid-key) propagate: a swallowed invalid key
+    // used to render as "no results", hiding credential problems.
+    const raw =
+      mediaType === "episode"
+        ? await client.searchTv(query)
+        : await client.searchMovie(query);
+    return raw.map((item) => mapCandidate(item, mediaType));
   }
 
   /** Backfill one record: unique high-confidence match binds, else review. */
