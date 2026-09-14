@@ -5,7 +5,7 @@ name: Test Build (desktop installers)
 on:
   workflow_dispatch:
   push:
-    branches: [main, "phase-1/**", "phase-2/**", "build/**"]
+    branches: [main, "phase-*/**", "build/**"]
 
 jobs:
   desktop:
