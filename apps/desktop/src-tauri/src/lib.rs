@@ -18,6 +18,24 @@ pub fn run() {
                     let _ = webview.eval(&expr);
                 }
             }
+
+            // Production hardening: WebView2 keeps F12 / right-click
+            // "inspect" alive in release builds unless explicitly
+            // disabled. Turn devtools and the default context menu off
+            // for end users (debug builds keep them for development).
+            #[cfg(all(target_os = "windows", not(debug_assertions)))]
+            {
+                if let Some(webview) = app.get_webview_window("main") {
+                    let _ = webview.with_webview(|webview| unsafe {
+                        if let Ok(core) = webview.controller().CoreWebView2() {
+                            if let Ok(settings) = core.Settings() {
+                                let _ = settings.SetAreDevToolsEnabled(false.into());
+                                let _ = settings.SetAreDefaultContextMenusEnabled(false.into());
+                            }
+                        }
+                    });
+                }
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

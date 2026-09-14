@@ -26,6 +26,7 @@ import {
   type ImageCacheService,
   type TmdbCandidate,
   type TmdbCandidateSnapshotCommand,
+  type TmdbStatus,
 } from "@auktake/ui-contracts";
 import type { EditSessionController } from "../headless/edit-session";
 import type { RecordsWriter } from "../headless/records-writer";
@@ -62,12 +63,14 @@ export function createEditOverlay(
     const [searchText, setSearchText] = React.useState("");
     const [candidates, setCandidates] = React.useState<TmdbCandidate[]>([]);
     const [searching, setSearching] = React.useState(false);
+    const [searchMessage, setSearchMessage] = React.useState<string | null>(null);
 
     const search = capabilities?.get<TmdbCandidateSnapshotCommand>(CAPABILITY_KEYS.tmdbCandidateSnapshot);
     // search capability resolution: tmdb plugin exports cmd:tmdb-search
     const tmdbSearch = capabilities?.get<
       (q: string, o?: { mediaType?: "movie" | "episode" }) => Promise<TmdbCandidate[]>
     >(CAPABILITY_KEYS.tmdbSearch);
+    const tmdbStatus = capabilities?.get<() => TmdbStatus>(CAPABILITY_KEYS.tmdbStatus);
 
     const save = async (): Promise<void> => {
       const errors = validateDraft(state.draft);
@@ -153,11 +156,20 @@ export function createEditOverlay(
                             disabled={searching || searchText.trim().length === 0}
                             onPress={async () => {
                               setSearching(true);
+                              setSearchMessage(null);
                               try {
                                 const found = await tmdbSearch?.(searchText.trim(), {
                                   mediaType: state.draft.mediaType,
                                 });
                                 setCandidates(found ?? []);
+                                setSearchMessage(
+                                  (found ?? []).length === 0
+                                    ? "无匹配结果，可换个关键词或直接手动录入"
+                                    : null,
+                                );
+                              } catch (error) {
+                                console.warn("[edit] tmdb search failed", error);
+                                setSearchMessage("搜索失败：网络或凭证问题，请稍后重试");
                               } finally {
                                 setSearching(false);
                               }
@@ -168,6 +180,14 @@ export function createEditOverlay(
                             </Text>
                           </Pressable>
                         </View>
+                        {searchMessage ? (
+                          <Text style={styles.searchMessage}>{searchMessage}</Text>
+                        ) : null}
+                        {!tmdbStatus?.().configured ? (
+                          <Text style={styles.searchMessage}>
+                            TMDB 未配置：请先在「记录」页右上角 TMDB 设置中填入凭证
+                          </Text>
+                        ) : null}
                         {candidates.map((c) => (
                           <Pressable
                             key={`${c.tmdbId}-${c.mediaType}`}
@@ -398,6 +418,7 @@ const styles = StyleSheet.create({
   },
   candidateTitle: { fontSize: 14, color: colors.text, fontWeight: fontWeight.medium as never },
   candidateMeta: { fontSize: 12, color: colors.textMuted },
+  searchMessage: { fontSize: 12, color: colors.textMuted },
   formError: { fontSize: 13, color: colors.danger, textAlign: "center" },
   reviewInput: {
     backgroundColor: colors.surface,

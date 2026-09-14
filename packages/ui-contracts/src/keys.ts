@@ -32,6 +32,8 @@ export const CAPABILITY_KEYS = {
   recordApplyTmdb: "cmd:record-apply-tmdb",
   /** tmdb plugin: resolve a picked candidate into a full TmdbSnapshot. */
   tmdbCandidateSnapshot: "cmd:tmdb-candidate-snapshot",
+  /** tmdb plugin: sync credential status probe (configured or not). */
+  tmdbStatus: "cmd:tmdb-status",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITY_KEYS)[keyof typeof CAPABILITY_KEYS];

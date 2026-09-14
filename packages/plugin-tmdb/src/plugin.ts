@@ -62,6 +62,7 @@ export function createTmdbPlugin(
 
       const keys = [
         CAPABILITY_KEYS.tmdbSearch,
+        CAPABILITY_KEYS.tmdbStatus,
         CAPABILITY_KEYS.tmdbCandidateSnapshot,
         CAPABILITY_KEYS.tmdbBackfill,
         CAPABILITY_KEYS.tmdbConfigure,
@@ -71,6 +72,10 @@ export function createTmdbPlugin(
       const search = (query: string, options?: { mediaType?: "movie" | "episode" }) =>
         service.search(query, options);
       deps.capabilities.register(CAPABILITY_KEYS.tmdbSearch, search);
+      deps.capabilities.register(CAPABILITY_KEYS.tmdbStatus, () => ({
+        configured: service.configured,
+        language: service.language,
+      }));
 
       const candidateSnapshot: TmdbCandidateSnapshotCommand = (candidate, episode) =>
         service.snapshotForCandidate(candidate, episode);

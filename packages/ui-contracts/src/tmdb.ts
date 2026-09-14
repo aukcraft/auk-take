@@ -50,6 +50,12 @@ export interface ImageCacheService {
   clear(): Promise<void>;
 }
 
+/** Sync TMDB availability probe for UI degradation hints. */
+export interface TmdbStatus {
+  readonly configured: boolean;
+  readonly language: string;
+}
+
 /** Resolve a picked search candidate into a full record snapshot. */
 export type TmdbCandidateSnapshotCommand = (
   candidate: TmdbCandidate,
