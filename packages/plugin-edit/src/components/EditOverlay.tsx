@@ -169,7 +169,16 @@ export function createEditOverlay(
                                 );
                               } catch (error) {
                                 console.warn("[edit] tmdb search failed", error);
-                                setSearchMessage("搜索失败：网络或凭证问题，请稍后重试");
+                                const kind = (error as { kind?: string })?.kind;
+                                const detail =
+                                  kind === "invalid-key"
+                                    ? "凭证被拒绝（401），请检查 TMDB 设置中的令牌"
+                                    : kind === "network"
+                                      ? "网络错误：无法访问 api.themoviedb.org"
+                                      : kind === "upstream"
+                                        ? "TMDB 服务异常，请稍后重试"
+                                        : "未知错误，详情见控制台";
+                                setSearchMessage(`搜索失败：${detail}`);
                               } finally {
                                 setSearching(false);
                               }

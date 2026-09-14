@@ -93,11 +93,16 @@ export class TmdbClient {
 
   /** Pure URL assembly — the seam tests assert against. */
   buildUrl(path: string, query: Record<string, string>): string {
-    const params = new URLSearchParams({ language: this.deps.language, ...query });
+    // encodeURIComponent, NOT URLSearchParams: the latter encodes
+    // spaces as '+', which TMDB treats literally — multi-word queries
+    // (e.g. "a minecraft movie") silently return nothing.
+    const params = Object.entries({ language: this.deps.language, ...query })
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join("&");
     if (!this.deps.credential.v4Token && this.deps.credential.apiKey) {
-      params.set("api_key", this.deps.credential.apiKey);
+      return `${this.baseUrl}${path}?${params}&api_key=${encodeURIComponent(this.deps.credential.apiKey)}`;
     }
-    return `${this.baseUrl}${path}?${params.toString()}`;
+    return `${this.baseUrl}${path}?${params}`;
   }
 
   private async request<T>(path: string, query: Record<string, string>): Promise<T> {

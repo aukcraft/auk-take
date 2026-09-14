@@ -16,10 +16,18 @@ describe("TmdbClient (stub fetch)", () => {
       language: "zh-CN",
       baseUrl: "https://api.test/3",
     });
-    await client.searchMovie("深海");
+    await client.searchMovie("a minecraft movie");
     const url = fetchImpl.mock.calls[0]![0];
     expect(url).toContain("https://api.test/3/search/movie?");
-    expect(decodeURIComponent(url)).toContain("query=深海");
+    expect(url).toContain("query=a%20minecraft%20movie"); // %20, never '+'
+    expect(url).not.toContain("a+minecraft");
+    const zh = new TmdbClient({
+      fetchImpl: vi.fn(async () => jsonResponse({ results: [] })) as unknown as FetchLike,
+      credential: { apiKey: "KEY" },
+      language: "zh-CN",
+    });
+    await zh.searchMovie("深海");
+    expect(decodeURIComponent(zh.buildUrl("/search/movie", { query: "深海" }))).toContain("query=深海");
     expect(url).toContain("language=zh-CN");
     expect(url).toContain("api_key=KEY");
   });
