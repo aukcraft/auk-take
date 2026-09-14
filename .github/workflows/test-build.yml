@@ -49,6 +49,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Inject the TMDB v4 Read Access Token into the built-in channel
+      # (encrypted at rest only applies to user config; the built-in
+      # token ships inside the app binary either way).
+      - name: Inject TMDB v4 token
+        if: env.TMDB_V4_READ_ACCESS_TOKEN != ''
+        run: |
+          printf '{ "apiKey": "", "v4Token": "%s" }' "$TMDB_V4_READ_ACCESS_TOKEN"             > packages/plugin-tmdb/src/builtin-key.json
+        env:
+          TMDB_V4_READ_ACCESS_TOKEN: ${{ secrets.TMDB_V4_READ_ACCESS_TOKEN }}
+
       - name: Build Tauri bundles
         working-directory: apps/desktop
         run: pnpm tauri build

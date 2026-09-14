@@ -42,3 +42,10 @@
 - [x] 7.2 Tauri CSP 收敛：api.themoviedb.org（connect-src）+ image.tmdb.org（img-src）+ 保留 dev/data/blob；双端验证 TMDB 请求与图片加载
 - [x] 7.3 CI：dep-guard allow-list 增 plugin-tmdb；全仓 lint/typecheck/test 通过
 - [ ] 7.4 双端冒烟：搜索绑定新建 → 真图海报墙 → 详情元数据 → 存量补全（含转人工）→ 断网降级色卡 → 解绑回哨兵 → Phase 1 手动闭环回归 → 重启数据仍在
+
+## 8. v4 令牌与凭证加密（实现期追加）
+
+- [x] 8.1 `secret-crypto`：v1 IV+keystream XOR 加密/解密/识别（纯 Node 单测：round-trip、CJK、IV 随机、篡改不出明文、坏格式抛错）
+- [x] 8.2 `TmdbClient` 双凭证形态：v4 Bearer 头优先、v3 api_key query 降级（stub 单测断言头与 query）
+- [x] 8.3 `TmdbService`：配置秘密字段加密落盘/解密读取、遗留明文兼容；builtin-key 通道增加 v4Token 字段
+- [x] 8.4 设置弹层增加 v4 令牌输入（加密存储提示）；CI secret `TMDB_V4_READ_ACCESS_TOKEN` 构建期注入内置通道

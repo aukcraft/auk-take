@@ -61,10 +61,12 @@ export type TmdbBackfillCommand = (recordId: string) => Promise<TmdbBackfillResu
 
 /** Persisted tmdb plugin config (syncMeta collection, id "tmdb-config"). */
 export interface TmdbConfig {
-  /** Empty string = use the built-in default key. */
+  /** v3 API key. Empty string = none. */
   readonly apiKey: string;
+  /** v4 Read Access Token (Authorization: Bearer). Empty string = none. */
+  readonly v4Token?: string;
   /** BCP-47 tag; TMDB falls back to original language when absent. */
   readonly language: string;
 }
 
-export const DEFAULT_TMDB_CONFIG: TmdbConfig = { apiKey: "", language: "zh-CN" };
+export const DEFAULT_TMDB_CONFIG: TmdbConfig = { apiKey: "", v4Token: "", language: "zh-CN" };

@@ -49,12 +49,13 @@ function CandidateRow({
 export function createTmdbOverlay(
   ui: TmdbUiStore,
   onReviewPick: (recordId: string, candidate: TmdbCandidate) => Promise<void>,
-  config: { apiKey: string; language: string },
-  onSaveConfig: (next: { apiKey: string; language: string }) => Promise<void>,
+  config: { apiKey: string; v4Token?: string; language: string },
+  onSaveConfig: (next: { apiKey: string; v4Token?: string; language: string }) => Promise<void>,
 ): React.ComponentType {
   return function TmdbOverlay() {
     const state = useSyncExternalStore(ui.subscribe, ui.getState);
     const [apiKey, setApiKey] = useState(config.apiKey);
+    const [v4Token, setV4Token] = useState(config.v4Token ?? "");
     const [language, setLanguage] = useState(config.language);
     const [saving, setSaving] = useState(false);
 
@@ -69,16 +70,28 @@ export function createTmdbOverlay(
           <View style={styles.overlay}>
             <View style={styles.card}>
               <Text style={styles.title}>TMDB 设置</Text>
-              <Text style={styles.label}>API Key（留空使用内置 Key）</Text>
+              <Text style={styles.label}>API Key v3（可选）</Text>
               <TextInput
                 style={styles.input}
                 value={apiKey}
                 onChangeText={setApiKey}
-                placeholder="留空 = 内置默认 Key"
+                placeholder="留空 = 使用 v4 令牌或内置配置"
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+              <Text style={styles.label}>Read Access Token v4（推荐）</Text>
+              <TextInput
+                style={styles.input}
+                value={v4Token}
+                onChangeText={setV4Token}
+                placeholder="eyJ…（加密存储于本机）"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                multiline
+              />
+              <Text style={styles.hint}>凭证经本机加密后持久化，不会明文落盘。</Text>
               <Text style={styles.label}>语言偏好</Text>
               <TextInput
                 style={styles.input}
@@ -98,7 +111,11 @@ export function createTmdbOverlay(
                   disabled={saving}
                   onPress={async () => {
                     setSaving(true);
-                    await onSaveConfig({ apiKey: apiKey.trim(), language: language.trim() || "zh-CN" });
+                    await onSaveConfig({
+                      apiKey: apiKey.trim(),
+                      v4Token: v4Token.trim(),
+                      language: language.trim() || "zh-CN",
+                    });
                     setSaving(false);
                     ui.closeConfig();
                   }}
@@ -172,6 +189,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: fontWeight.bold as never, color: colors.text },
   label: { fontSize: 13, color: colors.textMuted },
+  hint: { fontSize: 11, color: colors.textMuted, opacity: 0.8 },
   input: {
     backgroundColor: colors.surface,
     borderRadius: radius.sm,

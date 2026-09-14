@@ -119,6 +119,13 @@ tmdb = recommended：PluginManager 连接顺序上它排在 locked 插件之后�
 - **A4 移动端图片**：裸 RN 壳无原生工程，RNFS 不可引；移动端不注册 fs
   服务，卡片走远端直连 + 系统 HTTP 缓存（接口不变，后续接入原生工程后
   零结构改动启用本地缓存）。
+- **A6 凭证加密（用户追加需求）**：凭证支持 v4 Read Access Token（Bearer 头，
+  优先）与 v3 key（query）双形态；内置通道可由 CI secret
+  `TMDB_V4_READ_ACCESS_TOKEN` 构建期注入 builtin-key.json。用户配置的秘密
+  字段落盘前经纯 TS 流加密（`v1:<iv>:<cipher>`，随机 IV + pepper 种子
+  keystream XOR），读取时解密；遗留明文兼容读取。诚实边界：应用内含
+  pepper，这是**防 casual 读取/误泄漏的混淆级加密**，等价于本地明文的
+  攻击者可还原；OS keystore 需原生模块（后续 Phase 评估）。
 - **A5 桌面缓存图渲染**：经 `convertFileSrc`（Tauri asset 协议）转换本地
   路径；tauri.conf 启用 assetProtocol（scope `$APPDATA/**`）并显式收敛
   CSP（api.themoviedb.org connect-src、image.tmdb.org img-src，保留 dev

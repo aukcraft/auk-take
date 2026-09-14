@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: 插件契约与凭证配置
-plugin-tmdb SHALL 实现 `AukPlugin` 契约（id `tmdb`，tier `recommended`，permissions `network:fetch` + `storage:read` + `storage:write`）。TMDB API 凭证 SHALL 内置默认 Key 并允许用户配置覆盖；语言偏好 SHALL 可设置（默认 `zh-CN`）。凭证与语言偏好 SHALL 持久化于 Storage（syncMeta 集合 `{id:"tmdb-config"}`，经插件自身 storage:write 权限）——双壳 ConnectionStore 为内存实现，connect state 无法跨重启。凭证无效或未配置时插件 SHALL 优雅降级：搜索/补全命令返回空结果并提示，不阻塞 Phase 1 手动录入闭环。
+plugin-tmdb SHALL 实现 `AukPlugin` 契约（id `tmdb`，tier `recommended`，permissions `network:fetch` + `storage:read` + `storage:write`）。凭证支持两种形态并优先 v4：**TMDB v4 Read Access Token**（`Authorization: Bearer` 头；构建期可从 `TMDB_V4_READ_ACCESS_TOKEN` 注入内置通道）与 v3 API Key（query 参数）。用户配置 SHALL 覆盖内置通道；语言偏好 SHALL 可设置（默认 `zh-CN`）。凭证与语言偏好 SHALL 持久化于 Storage（syncMeta 集合 `{id:"tmdb-config"}`），其中**秘密字段（v4Token/apiKey）MUST 加密落盘、读取时解密**，明文不得出现在持久化层（遗留明文兼容读取并按下次保存升级）。加密为本地混淆级（应用内含密钥，详见 design A6），非保险库级。凭证无效或未配置时插件 SHALL 优雅降级：搜索/补全命令返回空结果并提示，不阻塞 Phase 1 手动录入闭环。
 
 #### Scenario: 默认 Key 开箱即用
 - **WHEN** 用户未做任何配置即触发 TMDB 搜索
@@ -21,6 +21,14 @@ plugin-tmdb SHALL 提供纯 TS 客户端口：HTTP fetch 函数注入（RN 原�
 #### Scenario: 搜索请求拼装
 - **WHEN** 以标题「深海」调用搜索且语言偏好为 zh-CN
 - **THEN** 注入的 fetch 收到 `/search/movie` 请求，query 含 `query=深海`、`language=zh-CN`、`api_key=<凭证>`
+
+#### Scenario: v4 令牌走 Bearer 头
+- **WHEN** 凭证为 v4 Read Access Token
+- **THEN** 请求以 `Authorization: Bearer <token>` 头携带凭证，query 不含 api_key
+
+#### Scenario: 凭证加密落盘
+- **WHEN** 用户保存含 v4 令牌的配置
+- **THEN** syncMeta 中存储的是 `v1:<iv>:<密文>` 形态（不含明文令牌）；重启加载后解密可用
 
 #### Scenario: stub 注入可测
 - **WHEN** 在纯 Node vitest 中以 stub fetch 构造客户端口

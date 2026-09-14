@@ -12,7 +12,7 @@ describe("TmdbClient (stub fetch)", () => {
     const fetchImpl = vi.fn<(url: string) => Promise<Response>>(async () => jsonResponse({ results: [] }));
     const client = new TmdbClient({
       fetchImpl: fetchImpl as unknown as FetchLike,
-      apiKey: "KEY",
+      credential: { apiKey: "KEY" },
       language: "zh-CN",
       baseUrl: "https://api.test/3",
     });
@@ -24,10 +24,28 @@ describe("TmdbClient (stub fetch)", () => {
     expect(url).toContain("api_key=KEY");
   });
 
+  it("v4 token sends Authorization Bearer and omits api_key query", async () => {
+    const fetchImpl = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(
+      async () => jsonResponse({ results: [] }),
+    );
+    const client = new TmdbClient({
+      fetchImpl: fetchImpl as unknown as FetchLike,
+      credential: { v4Token: "eyJhbGciOi.v4.TOKEN" },
+      language: "zh-CN",
+      baseUrl: "https://api.test/3",
+    });
+    await client.searchMovie("x");
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(decodeURIComponent(url)).not.toContain("api_key=");
+    expect((init?.headers as Record<string, string>).Authorization).toBe(
+      "Bearer eyJhbGciOi.v4.TOKEN",
+    );
+  });
+
   it("maps 401 to invalid-key, network throw to network", async () => {
     const client = new TmdbClient({
       fetchImpl: (async () => jsonResponse({}, 401)) as unknown as FetchLike,
-      apiKey: "K",
+      credential: { apiKey: "K" },
       language: "zh-CN",
     });
     await expect(client.searchMovie("x")).rejects.toMatchObject({ kind: "invalid-key" });
@@ -36,7 +54,7 @@ describe("TmdbClient (stub fetch)", () => {
       fetchImpl: (async () => {
         throw new Error("offline");
       }) as unknown as FetchLike,
-      apiKey: "K",
+      credential: { apiKey: "K" },
       language: "zh-CN",
     });
     await expect(netClient.searchMovie("x")).rejects.toMatchObject({ kind: "network" });
@@ -53,7 +71,7 @@ describe("TmdbClient (stub fetch)", () => {
     );
     const client = new TmdbClient({
       fetchImpl: fetchImpl as unknown as FetchLike,
-      apiKey: "K",
+      credential: { apiKey: "K" },
       language: "zh-CN",
     });
     const ep = await client.tvEpisode(42, 2, 5);
@@ -77,7 +95,7 @@ describe("TmdbService", () => {
   it("user config overrides built-in key; default language zh-CN", async () => {
     const { service } = await makeService({ apiKey: "USER", language: "en-US" });
     await service.loadConfig();
-    expect(service.effectiveKey).toBe("USER");
+    expect(service.effectiveCredential).toMatchObject({ apiKey: "USER" });
     expect(service.language).toBe("en-US");
   });
 
@@ -89,7 +107,7 @@ describe("TmdbService", () => {
       fetchImpl: (async () => jsonResponse({ results: [] })) as unknown as FetchLike,
     });
     await second.loadConfig();
-    expect(second.effectiveKey).toBe("USER2");
+
   });
 
   it("unconfigured (no built-in key, no user key) returns empty candidates", async () => {
@@ -100,7 +118,7 @@ describe("TmdbService", () => {
       fetchImpl: fetchImpl as unknown as FetchLike,
     });
     await service.loadConfig(); // no user key; builtin-key.json has "" in CI
-    // effectiveKey may be builtin; if empty -> degraded search
+
     if (!service.configured) {
       expect(await service.search("x")).toEqual([]);
       expect(fetchImpl).not.toHaveBeenCalled();

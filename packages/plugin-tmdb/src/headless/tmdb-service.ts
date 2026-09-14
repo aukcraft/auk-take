@@ -13,12 +13,17 @@ import {
 import { TmdbClient, TmdbError, type FetchLike, type RawSearchItem } from "./tmdb-client";
 import { buildEpisodeSnapshot, buildMovieSnapshotFull } from "./snapshot";
 import builtinKey from "../builtin-key.json";
+import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto";
 
 const CONFIG_ID = "tmdb-config";
 
-interface StoredConfig extends TmdbConfig {
+interface StoredConfig {
   readonly id: string;
   readonly schemaVersion: number;
+  /** Encrypted at rest (v1:<iv>:<cipher>); legacy plaintext tolerated. */
+  readonly apiKey?: string;
+  readonly v4Token?: string;
+  readonly language?: string;
 }
 
 /** Normalize a title for high-confidence matching (case/space/punct). */
@@ -40,42 +45,76 @@ export class TmdbService {
 
   constructor(private readonly deps: TmdbServiceDeps) {}
 
-  /** Load persisted user config (falls back to defaults). */
+  /** Load persisted user config (decrypt secrets; legacy plaintext tolerated). */
   async loadConfig(): Promise<TmdbConfig> {
     const rows = await this.deps.storage.loadAll<StoredConfig>(COLLECTIONS.syncMeta);
     const stored = rows.find((r) => r.id === CONFIG_ID);
+    const reveal = (value: string | undefined): string => {
+      if (!value) return "";
+      return isEncryptedSecret(value) ? decryptSecret(value) : value;
+    };
     this.config = {
-      apiKey: stored?.apiKey ?? "",
+      apiKey: reveal(stored?.apiKey),
+      v4Token: reveal(stored?.v4Token),
       language: stored?.language ?? DEFAULT_TMDB_CONFIG.language,
     };
     return this.config;
   }
 
+  /** Persist with SECRETS ENCRYPTED; plaintext never touches storage. */
   async saveConfig(config: TmdbConfig): Promise<void> {
     const rows = await this.deps.storage.loadAll<StoredConfig>(COLLECTIONS.syncMeta);
     const next = rows.filter((r) => r.id !== CONFIG_ID);
-    next.push({ id: CONFIG_ID, schemaVersion: 1, ...config });
+    next.push({
+      id: CONFIG_ID,
+      schemaVersion: 1,
+      apiKey: encryptSecret(config.apiKey),
+      v4Token: encryptSecret(config.v4Token ?? ""),
+      language: config.language,
+    });
     await this.deps.storage.persistAll(COLLECTIONS.syncMeta, next);
     this.config = config;
   }
 
-  /** Effective key: user override -> built-in default -> "" (degraded). */
-  get effectiveKey(): string {
-    return this.config.apiKey || builtinKey.apiKey;
+  /**
+   * Effective credential: user override -> built-in channel (v4 token
+   * from TMDB_V4_READ_ACCESS_TOKEN injection, else v3 key).
+   */
+  get effectiveCredential(): { v4Token?: string; apiKey?: string } {
+    if (this.config.v4Token || this.config.apiKey) {
+      return {
+        ...(this.config.v4Token ? { v4Token: this.config.v4Token } : {}),
+        ...(this.config.apiKey ? { apiKey: this.config.apiKey } : {}),
+      };
+    }
+    return {
+      ...(builtinKey.v4Token ? { v4Token: builtinKey.v4Token } : {}),
+      ...(builtinKey.apiKey ? { apiKey: builtinKey.apiKey } : {}),
+    };
   }
 
   get language(): string {
     return this.config.language;
   }
 
+  /** Plaintext USER config (not builtin) — for the settings dialog. */
+  get configApiKey(): string {
+    return this.config.apiKey;
+  }
+
+  get configV4Token(): string {
+    return this.config.v4Token ?? "";
+  }
+
   get configured(): boolean {
-    return this.effectiveKey.length > 0;
+    const c = this.effectiveCredential;
+    return Boolean(c.v4Token || c.apiKey);
   }
 
   private client(): TmdbClient {
     return new TmdbClient({
       fetchImpl: this.deps.fetchImpl,
-      apiKey: this.effectiveKey,
+      credential: this.effectiveCredential,
       language: this.language,
     });
   }

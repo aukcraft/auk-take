@@ -6,9 +6,19 @@
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
+/**
+ * Credential: a TMDB v4 Read Access Token (sent as Authorization:
+ * Bearer) or a v3 api_key (sent as query param). TMDB accepts both on
+ * the same endpoints; v4 is preferred when both are present.
+ */
+export interface TmdbCredential {
+  readonly v4Token?: string;
+  readonly apiKey?: string;
+}
+
 export interface TmdbClientDeps {
   readonly fetchImpl: FetchLike;
-  readonly apiKey: string;
+  readonly credential: TmdbCredential;
   readonly language: string;
   /** Override for tests; defaults to the public v3 API. */
   readonly baseUrl?: string;
@@ -76,20 +86,28 @@ export class TmdbClient {
     return this.deps.baseUrl ?? "https://api.themoviedb.org/3";
   }
 
+  /** True when a usable credential exists. */
+  get hasCredential(): boolean {
+    return Boolean(this.deps.credential.v4Token || this.deps.credential.apiKey);
+  }
+
   /** Pure URL assembly — the seam tests assert against. */
   buildUrl(path: string, query: Record<string, string>): string {
-    const params = new URLSearchParams({
-      api_key: this.deps.apiKey,
-      language: this.deps.language,
-      ...query,
-    });
+    const params = new URLSearchParams({ language: this.deps.language, ...query });
+    if (!this.deps.credential.v4Token && this.deps.credential.apiKey) {
+      params.set("api_key", this.deps.credential.apiKey);
+    }
     return `${this.baseUrl}${path}?${params.toString()}`;
   }
 
   private async request<T>(path: string, query: Record<string, string>): Promise<T> {
     let response: Response;
     try {
-      response = await this.deps.fetchImpl(this.buildUrl(path, query));
+      const init: RequestInit = {};
+      if (this.deps.credential.v4Token) {
+        init.headers = { Authorization: `Bearer ${this.deps.credential.v4Token}` };
+      }
+      response = await this.deps.fetchImpl(this.buildUrl(path, query), init);
     } catch (cause) {
       throw new TmdbError("network", `request failed: ${String(cause)}`);
     }
