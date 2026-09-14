@@ -49,14 +49,25 @@ function CandidateRow({
 export function createTmdbOverlay(
   ui: TmdbUiStore,
   onReviewPick: (recordId: string, candidate: TmdbCandidate) => Promise<void>,
-  config: { apiKey: string; v4Token?: string; language: string },
+  getConfig: () => { apiKey: string; v4Token?: string; language: string },
   onSaveConfig: (next: { apiKey: string; v4Token?: string; language: string }) => Promise<void>,
 ): React.ComponentType {
   return function TmdbOverlay() {
     const state = useSyncExternalStore(ui.subscribe, ui.getState);
-    const [apiKey, setApiKey] = useState(config.apiKey);
-    const [v4Token, setV4Token] = useState(config.v4Token ?? "");
-    const [language, setLanguage] = useState(config.language);
+    const [apiKey, setApiKey] = useState("");
+    const [v4Token, setV4Token] = useState("");
+    const [language, setLanguage] = useState("zh-CN");
+    // refresh fields from the LIVE service state each time the dialog
+    // opens (a stale create-time snapshot made an innocent re-save wipe
+    // the stored credentials)
+    React.useEffect(() => {
+      if (state.configOpen) {
+        const live = getConfig();
+        setApiKey(live.apiKey);
+        setV4Token(live.v4Token ?? "");
+        setLanguage(live.language);
+      }
+    }, [state.configOpen, getConfig]);
     const [saving, setSaving] = useState(false);
 
     return (

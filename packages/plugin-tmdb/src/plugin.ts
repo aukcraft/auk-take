@@ -147,7 +147,7 @@ export function createTmdbPlugin(
             await bind(recordId, candidate, records.find((r) => r.id === recordId));
             ui.closeReview();
           },
-          { apiKey: service.configApiKey, v4Token: service.configV4Token, language: service.language },
+          () => ({ apiKey: service.configApiKey, v4Token: service.configV4Token, language: service.language }),
           async (next) => {
             const config: TmdbConfig = {
               apiKey: next.apiKey,

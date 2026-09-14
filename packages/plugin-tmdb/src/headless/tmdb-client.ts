@@ -116,9 +116,19 @@ export class TmdbClient {
     } catch (cause) {
       throw new TmdbError("network", `request failed: ${String(cause)}`);
     }
-    if (response.status === 401) throw new TmdbError("invalid-key", "TMDB rejected the API key");
-    if (response.status === 404) throw new TmdbError("not-found", "TMDB resource not found");
-    if (!response.ok) throw new TmdbError("upstream", `TMDB HTTP ${response.status}`);
+    if (!response.ok) {
+      // surface TMDB's own words — distinguishes bad token shape,
+      // revoked key, and upstream faults without guessing
+      let detail = "";
+      try {
+        const body = (await response.json()) as { status_message?: string };
+        detail = body?.status_message ? `: ${body.status_message}` : "";
+      } catch {
+        /* non-JSON body */
+      }
+      const kind = response.status === 401 ? "invalid-key" : response.status === 404 ? "not-found" : "upstream";
+      throw new TmdbError(kind, `TMDB HTTP ${response.status}${detail}`);
+    }
     return (await response.json()) as T;
   }
 

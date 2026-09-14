@@ -177,9 +177,10 @@ export function createEditOverlay(
                               } catch (error) {
                                 console.warn("[edit] tmdb search failed", error);
                                 const kind = (error as { kind?: string })?.kind;
+                                const tmdbDetail = (error as { message?: string })?.message ?? "";
                                 const detail =
                                   kind === "invalid-key"
-                                    ? "凭证被拒绝（401）：v4 令牌应以 eyJ 开头且完整（注意区分 API Key 与 Read Access Token），请到 TMDB 设置重新粘贴"
+                                    ? `凭证被拒绝（401）：v4 令牌应以 eyJ 开头且完整（注意区分 API Key 与 Read Access Token）${tmdbDetail ? `（TMDB: ${tmdbDetail}）` : ""}`
                                     : kind === "network"
                                       ? "网络错误：无法访问 api.themoviedb.org"
                                       : kind === "upstream"
