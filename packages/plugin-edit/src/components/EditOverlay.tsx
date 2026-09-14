@@ -26,6 +26,8 @@ import {
   type ImageCacheService,
   type TmdbCandidate,
   type TmdbCandidateSnapshotCommand,
+  type TagListCommand,
+  type TagPickerComponent,
   type TmdbStatus,
 } from "@auktake/ui-contracts";
 import type { EditSessionController } from "../headless/edit-session";
@@ -71,6 +73,9 @@ export function createEditOverlay(
       (q: string, o?: { mediaType?: "movie" | "episode" }) => Promise<TmdbCandidate[]>
     >(CAPABILITY_KEYS.tmdbSearch);
     const tmdbStatus = capabilities?.get<() => TmdbStatus>(CAPABILITY_KEYS.tmdbStatus);
+    const TagPicker = capabilities?.get<TagPickerComponent>(CAPABILITY_KEYS.tagPicker);
+    const tagList = capabilities?.get<TagListCommand>(CAPABILITY_KEYS.tagList);
+    const createTag = capabilities?.get<(name: string) => Promise<import("@auktake/ui-contracts").Tag>>(CAPABILITY_KEYS.tagCreate);
 
     const save = async (): Promise<void> => {
       const errors = validateDraft(state.draft);
@@ -80,7 +85,11 @@ export function createEditOverlay(
       }
       session.beginSubmit();
       try {
-        const draft = parseDraft(state.draft);
+        // Drop tag ids that no longer exist (deleted tags).
+        const validTagIds = tagList
+          ? state.draft.tagIds.filter((id) => tagList().some((t) => t.id === id))
+          : state.draft.tagIds;
+        const draft = parseDraft({ ...state.draft, tagIds: validTagIds });
         // Resolve a staged candidate into a snapshot NOW, with the FINAL
         // season/episode from the form (episodes picked before filling
         // S/E used to bind S01E01 regardless of the form).
@@ -327,6 +336,26 @@ export function createEditOverlay(
                       </Field>
                     </View>
                   </View>
+                ) : null}
+                {TagPicker ? (
+                  <Field label="标签">
+                    <TagPicker
+                      selectedIds={state.draft.tagIds}
+                      onChange={(next) => session.setTagIds(next)}
+                      onCreate={
+                        createTag
+                          ? async (name) => {
+                              try {
+                                return await createTag(name);
+                              } catch (error) {
+                                console.warn("[edit] tag create failed", error);
+                                return undefined;
+                              }
+                            }
+                          : undefined
+                      }
+                    />
+                  </Field>
                 ) : null}
                 <Field label="观看日期" error={state.errors.watchedAt}>
                   <TextInput

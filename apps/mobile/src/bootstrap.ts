@@ -12,6 +12,9 @@ import { createEditPlugin } from "@auktake/plugin-edit";
 import { createRecordPlugin } from "@auktake/plugin-record";
 import { createTimelinePlugin } from "@auktake/plugin-timeline";
 import { createTmdbPlugin } from "@auktake/plugin-tmdb";
+import { createTagPlugin } from "@auktake/plugin-tag";
+import { createSearchPlugin } from "@auktake/plugin-search";
+import { createStatsPlugin } from "@auktake/plugin-stats";
 import type { PluginRuntimeDeps } from "@auktake/ui-contracts";
 
 /**
@@ -56,6 +59,10 @@ export function createRuntime(): AppRuntime {
   manager.register(createTimelinePlugin(deps));
   // recommended tier: search/binding + remote-direct images (no fs port).
   manager.register(createTmdbPlugin(deps));
+  // Phase 3: tags (locked, needs edit's cleanup channel), search + stats (recommended).
+  manager.register(createTagPlugin(deps));
+  manager.register(createSearchPlugin(deps));
+  manager.register(createStatsPlugin(deps));
 
   const pluginContext = (pluginId: string): PluginContext => ({
     pluginId,

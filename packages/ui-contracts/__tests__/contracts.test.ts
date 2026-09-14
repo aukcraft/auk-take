@@ -95,3 +95,18 @@ describe("tmdb helpers", () => {
     expect(tmdbImageUrl("")).toBeNull();
   });
 });
+
+describe("phase-3 constants", () => {
+  it("new keys stay unique across the whole set", () => {
+    const keys = Object.values(CAPABILITY_KEYS);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("tag events are unique and distinct from capability keys", async () => {
+    const { TAG_EVENTS } = await import("../src/index");
+    const names = Object.values(TAG_EVENTS);
+    expect(new Set(names).size).toBe(3);
+    const all = [...Object.values(CAPABILITY_KEYS), ...names];
+    expect(new Set(all).size).toBe(all.length);
+  });
+});

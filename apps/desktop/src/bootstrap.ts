@@ -13,6 +13,9 @@ import { createEditPlugin } from "@auktake/plugin-edit";
 import { createRecordPlugin } from "@auktake/plugin-record";
 import { createTimelinePlugin } from "@auktake/plugin-timeline";
 import { createTmdbPlugin } from "@auktake/plugin-tmdb";
+import { createTagPlugin } from "@auktake/plugin-tag";
+import { createSearchPlugin } from "@auktake/plugin-search";
+import { createStatsPlugin } from "@auktake/plugin-stats";
 import { FS_SERVICE, type PluginRuntimeDeps } from "@auktake/ui-contracts";
 
 /**
@@ -70,6 +73,10 @@ export function createRuntime(dev: boolean): AppRuntime {
       toRenderUri: (path) => convertFileSrc(path),
     }),
   );
+  // Phase 3: tags (locked, needs edit's cleanup channel), search + stats (recommended).
+  manager.register(createTagPlugin(deps));
+  manager.register(createSearchPlugin(deps));
+  manager.register(createStatsPlugin(deps));
 
   const pluginContext = (pluginId: string): PluginContext => ({
     pluginId,

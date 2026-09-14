@@ -3,19 +3,23 @@
  * switch + empty state CTA. Local view preference is memory-only
  * (spec: 视图切换消费时间线能力).
  */
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useMemo, useState, useSyncExternalStore } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import type { Projection } from "@auktake/ui-contracts";
 import {
   CAPABILITY_KEYS,
+  activeFilterCount,
   colors,
+  queryRecords,
   fontWeight,
   radius,
   spacing,
   type RecordEditCommand,
+  type RecordQuery,
   type TimelineComponent,
 } from "@auktake/ui-contracts";
+
 import { PosterWall } from "./PosterWall";
 
 type ViewId = "poster" | "timeline";
@@ -31,6 +35,9 @@ export function createRecordsTab(
       projection.getState.bind(projection),
     );
     const [view, setView] = useState<ViewId>("poster");
+    // Filter state is display-owned (design D3); the ENGINE comes from
+    // the search plugin via cmd:search when registered, else identity.
+    const [query, setQuery] = useState<RecordQuery>({});
 
     const timeline = capabilities.get<TimelineComponent>(CAPABILITY_KEYS.viewTimeline);
     if (timeline === undefined && dev) {
@@ -41,6 +48,16 @@ export function createRecordsTab(
 
     const openEditor = capabilities.get<RecordEditCommand>(CAPABILITY_KEYS.recordEdit);
     const openTmdbConfig = capabilities.get<() => void>(CAPABILITY_KEYS.tmdbConfigure);
+    const SearchToolbar = capabilities.get<React.ComponentType<{
+      query: RecordQuery;
+      onChange: (next: RecordQuery) => void;
+    }>>(CAPABILITY_KEYS.searchToolbar);
+    if (SearchToolbar === undefined && dev) {
+      console.warn(
+        `[display] search toolbar hidden: capability "${CAPABILITY_KEYS.searchToolbar}" not registered`,
+      );
+    }
+    const visible = useMemo(() => queryRecords(records, query), [records, query]);
 
     return (
       <View style={styles.root}>
@@ -49,7 +66,9 @@ export function createRecordsTab(
         ) : (
           <>
             <View style={styles.header}>
-              {timeline ? (
+              {SearchToolbar ? (
+                <SearchToolbar query={query} onChange={setQuery} />
+              ) : timeline ? (
                 <View style={styles.segment}>
                   {(
                     [
@@ -92,10 +111,22 @@ export function createRecordsTab(
                 ) : null}
               </View>
             </View>
-            {view === "poster" ? (
-              <PosterWall records={records} capabilities={capabilities} />
-            ) : timeline ? (
+            {visible.length === 0 ? (
+              <View style={styles.emptyResults}>
+                <Text style={styles.emptyResultsText}>无匹配记录</Text>
+                <Pressable
+                  style={styles.clearBtn}
+                  onPress={() => setQuery({})}
+                >
+                  <Text style={styles.clearBtnText}>清除筛选</Text>
+                </Pressable>
+              </View>
+            ) : view === "poster" ? (
+              <PosterWall records={visible} capabilities={capabilities} />
+            ) : timeline && activeFilterCount(query) === 0 ? (
               <TimelineSlot Component={timeline} />
+            ) : timeline && activeFilterCount(query) > 0 ? (
+              <PosterWall records={visible} capabilities={capabilities} />
             ) : null}
           </>
         )}
@@ -166,6 +197,15 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xxl, gap: spacing.md },
   emptyTitle: { fontSize: 20, fontWeight: fontWeight.bold as never, color: colors.text },
   emptyBody: { fontSize: 14, color: colors.textMuted, textAlign: "center" },
+  emptyResults: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md },
+  emptyResultsText: { fontSize: 16, color: colors.textMuted },
+  clearBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  clearBtnText: { color: colors.text, fontSize: 14 },
   cta: {
     marginTop: spacing.md,
     paddingVertical: spacing.md,

@@ -150,6 +150,12 @@ export class EditSessionController {
     this.transition({ ...this.state, pendingTmdb: snapshot, unbound: false });
   }
 
+  /** Phase 3: replace the selected tag id set. */
+  setTagIds(tagIds: readonly string[]): void {
+    if (this.state.status === "closed") return;
+    this.transition({ ...this.state, draft: { ...this.state.draft, tagIds } });
+  }
+
   /** Stage a picked candidate; resolved to a snapshot at SAVE time. */
   setPendingCandidate(candidate: TmdbCandidate): void {
     if (this.state.status === "closed") return;

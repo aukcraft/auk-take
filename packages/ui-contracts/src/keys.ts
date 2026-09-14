@@ -30,6 +30,22 @@ export const CAPABILITY_KEYS = {
   overlayTmdbBackfill: "ui:overlay:tmdb-backfill",
   /** edit plugin (internal channel): merge a TMDB snapshot into a record. */
   recordApplyTmdb: "cmd:record-apply-tmdb",
+  /** edit plugin (internal channel): strip a tag id from ALL records. */
+  recordRemoveTag: "cmd:record-remove-tag",
+  /** tag plugin: list all tags sorted by name. */
+  tagList: "cmd:tag-list",
+  /** tag plugin: create a tag (name) — rejects duplicates. */
+  tagCreate: "cmd:tag-create",
+  /** tag plugin: rename a tag, id preserved. */
+  tagRename: "cmd:tag-rename",
+  /** tag plugin: delete a tag (records cleaned via edit channel). */
+  tagDelete: "cmd:tag-delete",
+  /** tag plugin: tag picker component for the editor form. */
+  tagPicker: "ui:tag-picker",
+  /** search plugin: run a RecordQuery, get matching records. */
+  search: "cmd:search",
+  /** search plugin: toolbar component consumed by the records tab. */
+  searchToolbar: "ui:search-toolbar",
   /** tmdb plugin: resolve a picked candidate into a full TmdbSnapshot. */
   tmdbCandidateSnapshot: "cmd:tmdb-candidate-snapshot",
   /** tmdb plugin: sync credential status probe (configured or not). */
@@ -48,6 +64,13 @@ export const OVERLAY_KEYS: readonly CapabilityKey[] = [
   CAPABILITY_KEYS.overlayRecordDetail,
   CAPABILITY_KEYS.overlayTmdbBackfill,
 ];
+
+/** Tag collection change events published by the tag plugin (sole writer). */
+export const TAG_EVENTS = {
+  created: "tag:created",
+  renamed: "tag:renamed",
+  deleted: "tag:deleted",
+} as const;
 
 /** Record collection change events published by the edit plugin (sole writer). */
 export const RECORD_EVENTS = {

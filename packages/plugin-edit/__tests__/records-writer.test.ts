@@ -24,6 +24,7 @@ function makeWriter(now: () => string = () => T0) {
 }
 
 const draft = (overrides: Partial<ValidatedDraft> = {}): ValidatedDraft => ({
+  tagIds: [],
   title: "深海",
   originalTitle: "深海",
   mediaType: "movie",

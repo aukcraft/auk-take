@@ -29,6 +29,15 @@ importers:
       '@auktake/plugin-record':
         specifier: workspace:*
         version: link:../../packages/plugin-record
+      '@auktake/plugin-search':
+        specifier: workspace:*
+        version: link:../../packages/plugin-search
+      '@auktake/plugin-stats':
+        specifier: workspace:*
+        version: link:../../packages/plugin-stats
+      '@auktake/plugin-tag':
+        specifier: workspace:*
+        version: link:../../packages/plugin-tag
       '@auktake/plugin-timeline':
         specifier: workspace:*
         version: link:../../packages/plugin-timeline
@@ -105,6 +114,15 @@ importers:
       '@auktake/plugin-record':
         specifier: workspace:*
         version: link:../../packages/plugin-record
+      '@auktake/plugin-search':
+        specifier: workspace:*
+        version: link:../../packages/plugin-search
+      '@auktake/plugin-stats':
+        specifier: workspace:*
+        version: link:../../packages/plugin-stats
+      '@auktake/plugin-tag':
+        specifier: workspace:*
+        version: link:../../packages/plugin-tag
       '@auktake/plugin-timeline':
         specifier: workspace:*
         version: link:../../packages/plugin-timeline
@@ -311,6 +329,120 @@ importers:
       '@auktake/ui-nav':
         specifier: workspace:*
         version: link:../ui-nav
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.9.0)
+      '@types/react':
+        specifier: 18.3.12
+        version: 18.3.12
+      eslint:
+        specifier: ^10.9.0
+        version: 10.9.0
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-native:
+        specifier: 0.87.0
+        version: 0.87.0(@babel/core@7.29.7)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.12)(react@18.3.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.67.0
+        version: 8.67.0(eslint@10.9.0)(typescript@5.9.3)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(lightningcss@1.33.0)(terser@5.50.0)
+
+  packages/plugin-search:
+    dependencies:
+      '@auktake/core':
+        specifier: workspace:*
+        version: link:../core
+      '@auktake/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
+      '@auktake/ui-nav':
+        specifier: workspace:*
+        version: link:../ui-nav
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.9.0)
+      '@types/react':
+        specifier: 18.3.12
+        version: 18.3.12
+      eslint:
+        specifier: ^10.9.0
+        version: 10.9.0
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-native:
+        specifier: 0.87.0
+        version: 0.87.0(@babel/core@7.29.7)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.12)(react@18.3.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.67.0
+        version: 8.67.0(eslint@10.9.0)(typescript@5.9.3)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(lightningcss@1.33.0)(terser@5.50.0)
+
+  packages/plugin-stats:
+    dependencies:
+      '@auktake/core':
+        specifier: workspace:*
+        version: link:../core
+      '@auktake/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
+      '@auktake/ui-nav':
+        specifier: workspace:*
+        version: link:../ui-nav
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.9.0)
+      '@types/react':
+        specifier: 18.3.12
+        version: 18.3.12
+      eslint:
+        specifier: ^10.9.0
+        version: 10.9.0
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-native:
+        specifier: 0.87.0
+        version: 0.87.0(@babel/core@7.29.7)(@react-native-community/cli@20.2.0(typescript@5.9.3))(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.12)(react@18.3.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.67.0
+        version: 8.67.0(eslint@10.9.0)(typescript@5.9.3)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(lightningcss@1.33.0)(terser@5.50.0)
+
+  packages/plugin-tag:
+    dependencies:
+      '@auktake/core':
+        specifier: workspace:*
+        version: link:../core
+      '@auktake/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
+      '@auktake/ui-nav':
+        specifier: workspace:*
+        version: link:../ui-nav
+      ulid:
+        specifier: ^2.3.0
+        version: 2.4.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1

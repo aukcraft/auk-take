@@ -3,3 +3,5 @@ export * from "./types.js";
 export * from "./tokens.js";
 export * from "./projection.js";
 export * from "./tmdb.js";
+export * from "./tags.js";
+export * from "./query.js";
