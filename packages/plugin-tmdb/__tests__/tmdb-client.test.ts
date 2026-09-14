@@ -241,3 +241,21 @@ describe("normalizeConfig", () => {
     await expect(service.search("x")).rejects.toMatchObject({ kind: "invalid-key" });
   });
 });
+
+describe("defaultFetch regression (headers must reach fetch)", () => {
+  it("forwards init (Authorization header) to the real fetch", async () => {
+    const { defaultFetch } = await import("../src/headless/default-fetch");
+    const original = globalThis.fetch;
+    const seen: { url: string; init?: RequestInit }[] = [];
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      seen.push({ url: String(url), init });
+      return new Response(JSON.stringify({ results: [] }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      await defaultFetch("https://api.test/x", { headers: { Authorization: "Bearer eyJ.tok" } });
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(seen[0]?.init?.headers).toEqual({ Authorization: "Bearer eyJ.tok" });
+  });
+});

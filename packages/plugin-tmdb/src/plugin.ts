@@ -35,7 +35,7 @@ export interface TmdbPluginOptions {
   readonly toRenderUri?: (path: string) => string;
 }
 
-const defaultFetch = (url: string): Promise<Response> => fetch(url);
+import { defaultFetch } from "./headless/default-fetch";
 
 export function createTmdbPlugin(
   deps: PluginRuntimeDeps,
