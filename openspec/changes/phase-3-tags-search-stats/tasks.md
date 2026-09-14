@@ -20,8 +20,8 @@
 
 - [x] 4.1 包骨架（同 2.1 模式，recommended tier）
 - [x] 4.2 headless：queryRecords 纯函数（text 子串标题/原题、tagIds AND、评分区间含 0 语义、类型精确、日期闭区间、空查询零拷贝快路径）+ 全矩阵单测
-- [x] 4.3 headed：搜索框（防抖 300ms，timer 注入可测）+ 筛选面板（标签多选经 cmd:tag-list、评分/类型/日期）+ 激活条件角标 + 清空恢复
-- [x] 4.4 `cmd:search` 注册；display 记录 tab 接入（过滤态自持、结果喂既有网格、空结果空态 + 清除筛选；search 缺失隐藏入口 + dev warn）
+- [x] 4.3 headed：搜索套件工厂 `createSearchSuite` → [SearchButton（图标 + 激活条件可删 pills，× 即删即时过滤）, SearchCard（条件弹窗：关键词/日期/标签/评分/类型，仅 AND）]
+- [x] 4.4 `cmd:search` + 套件工厂注册；display 记录 tab 接入（Button 入头部、Card 弹窗、过滤态自持、空结果空态 + 清除；search 缺失隐藏 + dev warn）
 - [ ] 4.5 手工验证：即时过滤、组合筛选、清空恢复、卸载降级
 
 ## 5. plugin-stats

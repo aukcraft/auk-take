@@ -13,18 +13,7 @@ import {
   type SearchCommand,
 } from "@auktake/ui-contracts";
 import { queryRecords } from "@auktake/ui-contracts";
-import { createSearchToolbar } from "./components/SearchToolbar";
-
-/**
- * Toolbar props contract (display consumes): the component holds no
- * query state itself — display passes the current query down and
- * receives updates. This keeps the filter state in display (D3) while
- * search owns the engine.
- */
-export interface SearchToolbarProps {
-  readonly query: import("@auktake/ui-contracts").RecordQuery;
-  readonly onChange: (next: import("@auktake/ui-contracts").RecordQuery) => void;
-}
+import { createSearchSuite } from "./components/SearchSuite";
 
 export function createSearchPlugin(deps: PluginRuntimeDeps): AukPlugin {
   return {
@@ -48,10 +37,10 @@ export function createSearchPlugin(deps: PluginRuntimeDeps): AukPlugin {
       const search: SearchCommand = async (query) =>
         queryRecords(projection.getState(), query);
       deps.capabilities.register(CAPABILITY_KEYS.search, search);
-      deps.capabilities.register(
-        CAPABILITY_KEYS.searchToolbar,
-        createSearchToolbar(deps.capabilities),
-      );
+      // Tuple API capability: (props) => [Button, Card]; display calls it
+      // in useMemo as the query changes — component refs stay stable.
+      const suite = createSearchSuite(deps.capabilities);
+      deps.capabilities.register(CAPABILITY_KEYS.searchToolbar, suite);
 
       return {
         projection,

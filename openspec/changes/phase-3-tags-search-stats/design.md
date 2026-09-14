@@ -26,7 +26,11 @@ tags 数据一旦被记录引用即不可孤立（编辑器标签区、筛选、
 
 删除/重命名标签需改记录的 `user.tags`——records 唯一写入方 invariant 不破：edit 暴露 `cmd:record-remove-tag`（`(tagId) => 批量移除引用 + 逐条 emit record:updated`）。tag 插件持有该命令引用并在 delete/rename 时调用；命令未注册（edit 未加载）时 tag 插件拒绝执行破坏性操作并提示。重命名不改记录（引用按 id），仅需事件通知读方刷新名称缓存。
 
-### D3. 搜索结果供给：display 消费 cmd:search + 自持过滤态
+### D3. 搜索 UI 形态与结果供给（实现期用户重设计）
+
+搜索/筛选合并为单一功能：plugin-search 注册**套件工厂**能力（`ui:search-toolbar` 键沿用），`createSearchSuite({ query, onChange }) => [SearchButton, SearchCard]`——Button 为搜索图标入口 + 激活条件可删 pills（Text/Time/Tag/评分/类型，× 即删并即时过滤）；Card 为条件弹窗（关键词/日期/标签/评分/类型），v1 仅 AND。过滤状态仍由 display 自持（query + onChange 下传），引擎不变（query engine 已在 ui-contracts）。
+
+### D3a. 搜索结果供给：display 消费 cmd:search + 自持过滤态
 
 记录 tab 的过滤状态（text/筛选对象）由 **display 的 RecordsTab 自持**（useState，仅内存），经 `cmd:search`（search 插件注册）取过滤结果数组，喂给既有 PosterWall/Timeline 渲染——display 不 import search，search 不 import display；两侧未注册互相隐藏。*替代方案*：search 注册 `ui:records-toolbar` 组件能力让 display 拉取渲染——多一层组件契约，v1 不必要，弃。
 

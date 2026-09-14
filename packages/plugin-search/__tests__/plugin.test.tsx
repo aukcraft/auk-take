@@ -11,8 +11,8 @@ import { CAPABILITY_KEYS, type SearchCommand } from "@auktake/ui-contracts";
 import { vi } from "vitest";
 
 // headless-only test convention: stub the headed toolbar factory
-vi.mock("../src/components/SearchToolbar", () => ({
-  createSearchToolbar: () => () => null,
+vi.mock("../src/components/SearchSuite", () => ({
+  createSearchSuite: () => (props: unknown) => [() => null, () => null],
 }));
 
 import { createSearchPlugin } from "../src/plugin";

@@ -15,24 +15,24 @@ plugin-search SHALL 提供纯函数 query engine：输入记录快照 + 查询�
 - **WHEN** 查询对象全字段为空
 - **THEN** 返回全部记录（与无筛选等价）
 
-### Requirement: 搜索框与筛选面板 UI
-plugin-search SHALL 在记录 tab 头部提供搜索框（防抖 300ms 触发）与筛选入口按钮（未生效筛选时收起、生效时以角标显示激活条件数）；筛选面板含标签多选（经 `cmd:tag-list`）、评分区间、类型、日期区间。筛选/搜索状态 SHALL 仅存内存不持久化。结果 SHALL 经既有海报墙/时间线网格渲染（搜索插件提供过滤后的记录列表供给 display，或由 display 消费 `cmd:search`——实现取其一并在 design 记账）。
+### Requirement: 搜索按钮与条件弹窗
+plugin-search SHALL 以套件工厂形式提供搜索 UI：`createSearchSuite({ query, onChange })` 返回 **[SearchButton, SearchCard]** 两个组件。SearchButton 为记录 tab 头部的搜索图标入口，并在存在激活条件时以**可删除 pills** 展示各条件（如 `Text: 关键词`、`Time: 2026-01-01~2026-03-01`、`Tag: 科幻`，pill 点击 × 即移除该条件并即时重新过滤）；点击按钮打开 SearchCard 小弹窗，可输入/修改组合条件（关键词、日期范围、标签多选、评分、类型），v1 组合语义仅 **AND**（全部满足才展示）。查询状态 SHALL 仅存内存不持久化。结果 SHALL 经既有海报墙/时间线网格渲染。
 
-#### Scenario: 输入即时过滤
-- **WHEN** 搜索框输入「沙」
-- **THEN** 300ms 防抖后网格仅显示标题/原题含「沙」的记录
+#### Scenario: 条件 pill 快捷删除
+- **WHEN** 激活条件含 `Tag: 科幻` 且用户点击该 pill 的 ×
+- **THEN** 该标签条件移除，网格即时按剩余条件重新过滤
 
-#### Scenario: 组合筛选
-- **WHEN** 选择标签「科幻」+ 评分 ≥8
-- **THEN** 网格仅显示同时满足两条件的记录，筛选按钮角标显示 2
+#### Scenario: 组合条件 AND
+- **WHEN** 弹窗中同时设定关键词「沙」与标签「科幻」
+- **THEN** 仅同时满足两条件的记录展示
 
 #### Scenario: 清空恢复
-- **WHEN** 用户清空搜索框并重置筛选
-- **THEN** 网格回到未过滤全量视图
+- **WHEN** 用户在弹窗清除全部条件
+- **THEN** pills 消失，网格回到未过滤全量视图
 
 #### Scenario: 插件缺失降级
 - **WHEN** plugin-search 未加载
-- **THEN** 记录 tab 无搜索框/筛选入口，海报墙正常
+- **THEN** 记录 tab 无搜索按钮，海报墙正常
 
 ### Requirement: 全局搜索命令
 plugin-search SHALL 注册 `cmd:search`（查询对象 → 匹配记录数组），供日历点选、统计下钻等任意调用方复用同一引擎。命令未注册时调用方降级。

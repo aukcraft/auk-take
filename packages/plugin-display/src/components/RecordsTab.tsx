@@ -48,27 +48,38 @@ export function createRecordsTab(
 
     const openEditor = capabilities.get<RecordEditCommand>(CAPABILITY_KEYS.recordEdit);
     const openTmdbConfig = capabilities.get<() => void>(CAPABILITY_KEYS.tmdbConfigure);
-    const SearchToolbar = capabilities.get<React.ComponentType<{
-      query: RecordQuery;
-      onChange: (next: RecordQuery) => void;
-    }>>(CAPABILITY_KEYS.searchToolbar);
-    if (SearchToolbar === undefined && dev) {
+    const makeSuite = capabilities.get<
+      (props: { query: RecordQuery; onChange: (next: RecordQuery) => void }) => readonly [
+        React.ComponentType,
+        React.ComponentType,
+      ]
+    >(CAPABILITY_KEYS.searchToolbar);
+    if (makeSuite === undefined && dev) {
       console.warn(
-        `[display] search toolbar hidden: capability "${CAPABILITY_KEYS.searchToolbar}" not registered`,
+        `[display] search entry hidden: capability "${CAPABILITY_KEYS.searchToolbar}" not registered`,
       );
     }
+    // Tuple API: const [Button, Card] = makeSuite({ query, onChange })
+    const [SearchButton, SearchCard] = useMemo(
+      () =>
+        makeSuite
+          ? makeSuite({ query, onChange: setQuery })
+          : [undefined, undefined],
+      [makeSuite, query],
+    );
     const visible = useMemo(() => queryRecords(records, query), [records, query]);
 
     return (
       <View style={styles.root}>
+        {SearchCard ? <SearchCard /> : null}
         {records.length === 0 ? (
           <EmptyState openEditor={openEditor} />
         ) : (
           <>
             <View style={styles.headerColumn}>
               <View style={styles.header}>
-                {SearchToolbar ? (
-                  <SearchToolbar query={query} onChange={setQuery} />
+                {SearchButton ? (
+                  <SearchButton />
                 ) : (
                   <View style={styles.headerSpacer} />
                 )}
