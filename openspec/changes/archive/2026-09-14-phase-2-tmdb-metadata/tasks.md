@@ -41,7 +41,7 @@
 - [x] 7.1 双壳装配 plugin-tmdb（recommended tier 启动语义验证：未连接配置时能力缺失、应用回退 Phase 1 形态）
 - [x] 7.2 Tauri CSP 收敛：api.themoviedb.org（connect-src）+ image.tmdb.org（img-src）+ 保留 dev/data/blob；双端验证 TMDB 请求与图片加载
 - [x] 7.3 CI：dep-guard allow-list 增 plugin-tmdb；全仓 lint/typecheck/test 通过
-- [ ] 7.4 双端冒烟：搜索绑定新建 → 真图海报墙 → 详情元数据 → 存量补全（含转人工）→ 断网降级色卡 → 解绑回哨兵 → Phase 1 手动闭环回归 → 重启数据仍在
+- [x] 7.4 双端冒烟：搜索绑定新建 → 真图海报墙 → 详情元数据 → 存量补全（含转人工）→ 断网降级色卡 → 解绑回哨兵 → Phase 1 手动闭环回归 → 重启数据仍在
 
 ## 8. v4 令牌与凭证加密（实现期追加）
 

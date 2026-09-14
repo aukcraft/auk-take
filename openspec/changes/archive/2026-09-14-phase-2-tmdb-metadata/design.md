@@ -136,3 +136,19 @@ tmdb = recommended：PluginManager 连接顺序上它排在 locked 插件之后�
   被全部拦截——34576261816 安装包样式全崩即此因。null CSP 下外联请求
   本不受限，TMDB 域无需显式放行；如未来需要收紧 CSP，须配合
   `dangerousDisableAssetCspModification` 或改用文件级样式方案再审。
+
+- **A7 实现期问题台账（冒烟期间修复）**：
+  - Tauri 生产构建 CSP 注入 nonce 使浏览器忽略 'unsafe-inline'，RNW 运行时
+    样式全崩 → CSP 回退 null（D6 修订）
+  - `defaultFetch` 曾丢弃 init，Authorization 头从未上链（所有 401 的最终
+    根因）→ 抽 `headless/default-fetch.ts` + 回归测试钉死
+  - URLSearchParams 的 `+` 空格编码使多词查询失效 → 改 encodeURIComponent
+  - 设置弹层创建时快照使重开显示空值、误存清空凭证 → 改打开时实时刷新
+  - 401 曾被吞成「无匹配结果」→ 透传并附 TMDB 原文理由
+  - 剧集候选选中即解析快照，S/E 后填不生效（S01E01 固化）→ 推迟到保存时
+    解析 + 自动预填 S/E
+  - 凭证卫生：剥离内部空白、v3/v4 贴错槽自动归位
+  - DevTools：release 默认禁用，开发测试阶段开 `devtools` cargo feature
+- **D13 响应式断点验证说明**：<720px 底部导航分支在桌面因窗口
+  `minWidth: 900` 不可达（设计如此，桌面保持侧栏）；该分支验证 deferred
+  到移动端真机冒烟。
