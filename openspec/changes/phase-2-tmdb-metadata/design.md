@@ -63,9 +63,12 @@ fetch 注入：双端原生 `fetch`（RN Hermes / Tauri WebView）均可直连 T
 
 display 卡片解析升级为三档异步：`resolveCardSource(record, imageCache)` 返回 `{ kind: "local" | "remote-via-cache" | "palette", source?: string }`；组件层先渲色卡占位（立即）、图片解析成功后替换（无动画，Phase 5 再加）。远端直连档在 image-cache 未注册时启用（RN 端 `<Image source={{uri: posterUrl}}>`；桌面端 CSP 已放行 image.tmdb.org）。
 
-### D6. 桌面端网络白名单
+### D6. 桌面端网络与本地资源（实现期修订）
 
-`tauri.conf.json` security.csp 从 `null` 收敛为显式放行：`connect-src` 加 `https://api.themoviedb.org`，`img-src` 加 `https://image.tmdb.org` + `asset:` + `data:`（本地缓存图经自定义协议或 blob 加载，实现期以 RNW `<Image>` 的实际行为定，二选一并在 README 记账）。移动端无额外配置。
+原计划显式收敛 CSP 放行 TMDB 域；实测发现 Tauri 生产构建的 CSP 注入追
+加 nonce 后浏览器忽略 'unsafe-inline'，RNW 运行时动态样式全被拦截（样式
+崩坏）。故 **CSP 保持 null**（null 下网络请求不受限，无需白名单），仅启用
+assetProtocol（scope `$APPDATA/**`）承载本地缓存图。移动端无额外配置。
 
 ### D7. tier 与启动语义
 
@@ -127,7 +130,9 @@ tmdb = recommended：PluginManager 连接顺序上它排在 locked 插件之后�
   pepper，这是**防 casual 读取/误泄漏的混淆级加密**，等价于本地明文的
   攻击者可还原；OS keystore 需原生模块（后续 Phase 评估）。
 - **A5 桌面缓存图渲染**：经 `convertFileSrc`（Tauri asset 协议）转换本地
-  路径；tauri.conf 启用 assetProtocol（scope `$APPDATA/**`）并显式收敛
-  CSP（api.themoviedb.org connect-src、image.tmdb.org img-src，保留 dev
-  localhost 与 data:/blob:）。`resolve()` 直接返回可渲染 URI，
-  `mediaCache.poster` 存的即该值。
+  路径；tauri.conf 启用 assetProtocol（scope `$APPDATA/**`）。
+  **CSP 保持 null**（D6 修订）：Tauri 生产构建的 CSP 注入会追加 nonce，
+  依 CSP 规范浏览器随即忽略 'unsafe-inline'，RNW 运行时插入的 <style>
+  被全部拦截——34576261816 安装包样式全崩即此因。null CSP 下外联请求
+  本不受限，TMDB 域无需显式放行；如未来需要收紧 CSP，须配合
+  `dangerousDisableAssetCspModification` 或改用文件级样式方案再审。
