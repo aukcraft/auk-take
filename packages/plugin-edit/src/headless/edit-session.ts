@@ -5,6 +5,7 @@
  * state updates (no I/O) so behavior is Node-testable.
  */
 import type { MovieRecord, TmdbSnapshot } from "@auktake/core";
+import type { TmdbCandidate } from "@auktake/ui-contracts";
 import { draftFromRecord, emptyDraft, type EditorDraft, type FieldErrors } from "./validation";
 
 export type EditStatus = "closed" | "editing" | "submitting";
@@ -24,6 +25,12 @@ export interface EditSessionState {
   readonly formError: string | null;
   /** Phase 2: TMDB snapshot staged from a picked candidate (null = manual). */
   readonly pendingTmdb: TmdbSnapshot | null;
+  /**
+   * Picked-but-not-yet-resolved candidate. The snapshot is resolved at
+   * SAVE time so episodes bind with the FINAL season/episode from the
+   * form (picking before filling S/E used to lock in S01E01).
+   */
+  readonly pendingCandidate: TmdbCandidate | null;
   /** True when the user explicitly unbound an existing TMDB snapshot. */
   readonly unbound: boolean;
   readonly deletePrompt: DeletePrompt | null;
@@ -36,6 +43,7 @@ const CLOSED: EditSessionState = {
   errors: {},
   formError: null,
   pendingTmdb: null,
+  pendingCandidate: null,
   unbound: false,
   deletePrompt: null,
 };
@@ -64,6 +72,7 @@ export class EditSessionController {
       errors: {},
       formError: null,
       pendingTmdb: null,
+      pendingCandidate: null,
       unbound: false,
       deletePrompt: null,
     });
@@ -78,6 +87,7 @@ export class EditSessionController {
       errors: {},
       formError: null,
       pendingTmdb: record.tmdb.id > 0 ? record.tmdb : null,
+      pendingCandidate: null,
       unbound: false,
       deletePrompt: null,
     });
@@ -140,10 +150,26 @@ export class EditSessionController {
     this.transition({ ...this.state, pendingTmdb: snapshot, unbound: false });
   }
 
+  /** Stage a picked candidate; resolved to a snapshot at SAVE time. */
+  setPendingCandidate(candidate: TmdbCandidate): void {
+    if (this.state.status === "closed") return;
+    this.transition({
+      ...this.state,
+      pendingCandidate: candidate,
+      pendingTmdb: null,
+      unbound: false,
+    });
+  }
+
   /** Explicitly unbind: saving falls back to manual sentinel semantics. */
   unbindTmdb(): void {
     if (this.state.status === "closed") return;
-    this.transition({ ...this.state, pendingTmdb: null, unbound: true });
+    this.transition({
+      ...this.state,
+      pendingTmdb: null,
+      pendingCandidate: null,
+      unbound: true,
+    });
   }
 
   /** Second-confirmation prompt for deletion (spec: 删除二次确认). */

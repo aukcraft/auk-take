@@ -162,3 +162,25 @@ describe("EditSessionController pendingTmdb", () => {
     expect(session.getState().unbound).toBe(true);
   });
 });
+
+describe("EditSessionController pendingCandidate", () => {
+  it("staging a candidate clears pendingTmdb; unbind clears both", () => {
+    const session = new EditSessionController();
+    session.openNew("2026-05-20");
+    session.setPendingCandidate({
+      tmdbId: 42,
+      mediaType: "episode",
+      title: "幕府将军",
+      originalTitle: "Shōgun",
+      releaseDate: "2024-02-27",
+      posterPath: "/s.jpg",
+      overview: "",
+      tvId: 42,
+    });
+    expect(session.getState().pendingCandidate?.tmdbId).toBe(42);
+    expect(session.getState().pendingTmdb).toBeNull();
+    session.unbindTmdb();
+    expect(session.getState().pendingCandidate).toBeNull();
+    expect(session.getState().unbound).toBe(true);
+  });
+});

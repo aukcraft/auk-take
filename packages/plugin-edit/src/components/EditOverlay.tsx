@@ -16,7 +16,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import type { TmdbSnapshot } from "@auktake/core";
+
 import {
   CAPABILITY_KEYS,
   colors,
@@ -81,20 +81,31 @@ export function createEditOverlay(
       session.beginSubmit();
       try {
         const draft = parseDraft(state.draft);
+        // Resolve a staged candidate into a snapshot NOW, with the FINAL
+        // season/episode from the form (episodes picked before filling
+        // S/E used to bind S01E01 regardless of the form).
+        let staged = state.pendingTmdb;
+        if (state.pendingCandidate && search) {
+          const episode =
+            draft.mediaType === "episode"
+              ? { season: draft.seasonNumber ?? 1, episode: draft.episodeNumber ?? 1 }
+              : undefined;
+          staged = await search(state.pendingCandidate, episode);
+        }
         const directive = state.unbound
           ? { keep: false, unbind: true }
-          : state.pendingTmdb
-            ? { keep: false, snapshot: state.pendingTmdb }
+          : staged
+            ? { keep: false, snapshot: staged }
             : undefined;
         let savedId: string | undefined;
         if (state.editingId) {
           const updated = await writer.update(state.editingId, draft, directive);
           savedId = updated?.id;
         } else {
-          const created = await writer.create(draft, state.pendingTmdb ?? undefined);
+          const created = await writer.create(draft, staged ?? undefined);
           savedId = created.id;
         }
-        const poster = (state.unbound ? "" : state.pendingTmdb?.posterPath) ?? "";
+        const poster = (state.unbound ? "" : staged?.posterPath) ?? "";
         if (savedId && poster) warmPoster(savedId, poster);
         session.close();
       } catch (error) {
@@ -139,6 +150,21 @@ export function createEditOverlay(
                         </Text>
                         <Pressable style={styles.unbind} onPress={() => session.unbindTmdb()}>
                           <Text style={styles.unbindText}>解绑</Text>
+                        </Pressable>
+                      </View>
+                    ) : state.pendingCandidate ? (
+                      <View style={styles.boundRow}>
+                        <Text style={styles.boundText} numberOfLines={2}>
+                          已选：《{state.pendingCandidate.title}》
+                          {state.pendingCandidate.releaseDate
+                            ? ` (${state.pendingCandidate.releaseDate.slice(0, 4)})`
+                            : ""}
+                          {state.pendingCandidate.mediaType === "episode"
+                            ? "，保存时按当前季/集绑定"
+                            : "，保存时绑定元数据"}
+                        </Text>
+                        <Pressable style={styles.unbind} onPress={() => session.unbindTmdb()}>
+                          <Text style={styles.unbindText}>取消选择</Text>
                         </Pressable>
                       </View>
                     ) : (
@@ -209,17 +235,23 @@ export function createEditOverlay(
                           <Pressable
                             key={`${c.tmdbId}-${c.mediaType}`}
                             style={styles.candidate}
-                            onPress={async () => {
-                              if (!search) return;
-                              const episode =
-                                state.draft.mediaType === "episode"
-                                  ? {
-                                      season: Number(state.draft.seasonNumber) || 1,
-                                      episode: Number(state.draft.episodeNumber) || 1,
-                                    }
-                                  : undefined;
-                              const snapshot: TmdbSnapshot = await search(c, episode);
-                              session.setPendingTmdb(snapshot);
+                            onPress={() => {
+                              // Stage the CANDIDATE only: the snapshot is
+                              // resolved at save time with the FINAL
+                              // season/episode from the form.
+                              session.setPendingCandidate(c);
+                              if (
+                                c.mediaType === "episode" &&
+                                state.draft.seasonNumber.trim().length === 0
+                              ) {
+                                session.setField("seasonNumber", "1");
+                              }
+                              if (
+                                c.mediaType === "episode" &&
+                                state.draft.episodeNumber.trim().length === 0
+                              ) {
+                                session.setField("episodeNumber", "1");
+                              }
                               setCandidates([]);
                             }}
                           >
