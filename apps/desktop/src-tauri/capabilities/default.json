@@ -17,10 +17,25 @@
       "identifier": "fs:allow-write-text-file",
       "allow": [{ "path": "$APPDATA/**" }]
     },
-    "fs:allow-read-file",
-    "fs:allow-write-file",
-    "fs:allow-remove",
-    "fs:allow-rename",
-    "fs:allow-exists"
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-remove",
+      "allow": [{ "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-rename",
+      "allow": [{ "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$APPDATA/**" }]
+    }
   ]
 }

@@ -18,6 +18,11 @@ pub fn run() {
                     let _ = webview.eval(&expr);
                 }
             }
+
+            // NOTE: devtools stay ENABLED during the dev/test phase
+            // (F12 / right-click inspect). For production hardening
+            // later: SetAreDevToolsEnabled(false) + disable the context
+            // menu on the WebView2 controller in release builds.
             Ok(())
         })
         .run(tauri::generate_context!())

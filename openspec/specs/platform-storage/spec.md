@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the platform Storage implementations: platform-rn (op-sqlite, transactional, no ORM) and platform-tauri (single JSON file, atomic temp-file+rename writes), the reusable shared contract test suite, and the dependency constraints that keep platform packages isolated and Node-testable.
+Defines platform-specific Storage implementations: op-sqlite on RN (transactional full-replace), JSON-file on Tauri (temp-file+rename atomic writes, OPFS out of scope), and the shared contract tests that ensure behavior equivalence across engines.
 
 ## Requirements
 

@@ -3,11 +3,16 @@
  * Dependency-direction guard (spec: host-shell "依赖方向守卫").
  *
  * Rules:
- * - core: no platform deps (react-native, react, tauri) and no internal
- *   deps (platform packages or ui-nav)
+ * - core: no platform deps (react/react-native/tauri/...) and no
+ *   internal deps — core purity (0a guard, unchanged)
+ * - ui-contracts: only @auktake/core (peer, types) + react (peer,
+ *   types); no react-native, no other internal packages
  * - platform-rn / platform-tauri / ui-nav: only @auktake/core (peer) +
- *   their own platform libraries; no cross-dependencies, no app deps
- * - apps: core + corresponding platform package + ui-nav allowed
+ *   their own platform libraries; no cross-dependencies
+ * - plugin-*: ONLY @auktake/core + @auktake/ui-contracts (+ ui-nav for
+ *   tab keys); inter-plugin deps, platform-* deps and app deps FAIL;
+ *   react/react-native allowed as peers only
+ * - apps: core + platform package + ui-nav + ui-contracts + plugin-*
  */
 const fs = require("fs");
 const path = require("path");
@@ -17,6 +22,7 @@ const failures = [];
 
 const PLATFORM_LIBS = [
   "react",
+  "react-dom",
   "react-native",
   "react-native-web",
   "@tauri-apps/api",
@@ -24,6 +30,9 @@ const PLATFORM_LIBS = [
   "@tauri-apps/plugin-fs",
   "@op-engineering/op-sqlite",
 ];
+
+// runtime libs a plugin may depend on beyond @auktake/* (ulid: edit's record ids)
+const PLUGIN_EXTRA_LIBS = ["ulid"];
 
 const readPkg = (p) => JSON.parse(fs.readFileSync(path.join(root, p, "package.json"), "utf8"));
 const depsOf = (pkg) => ({
@@ -42,33 +51,86 @@ const coreDeps = depsOf(core);
 for (const lib of PLATFORM_LIBS) {
   if (coreDeps[lib]) fail("core-no-platform-deps", `packages/core depends on ${lib}`);
 }
-for (const internal of ["@auktake/platform-rn", "@auktake/platform-tauri", "@auktake/ui-nav"]) {
+for (const internal of [
+  "@auktake/platform-rn",
+  "@auktake/platform-tauri",
+  "@auktake/ui-nav",
+  "@auktake/ui-contracts",
+]) {
   if (coreDeps[internal]) fail("core-no-internal-deps", `packages/core depends on ${internal}`);
 }
 
-// Rule 2: platform/ui packages depend only on core + their own platform libs
+// Rule 2: per-package allowed internal dependency sets
 const allowed = {
-  "packages/platform-rn": ["@auktake/core", "@op-engineering/op-sqlite"],
-  "packages/platform-tauri": ["@auktake/core", "@tauri-apps/plugin-fs"],
+  "packages/core": [],
+  "packages/ui-contracts": ["@auktake/core"],
+  "packages/platform-rn": ["@auktake/core"],
+  "packages/platform-tauri": ["@auktake/core"],
   "packages/ui-nav": ["@auktake/core"],
+  "packages/plugin-edit": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-display": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-record": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-timeline": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-tmdb": ["@auktake/core", "@auktake/ui-contracts"],
 };
-for (const [dir, allow] of Object.entries(allowed)) {
+
+const packageDirs = fs
+  .readdirSync(path.join(root, "packages"))
+  .map((d) => `packages/${d}`)
+  .filter((d) => fs.existsSync(path.join(root, d, "package.json")));
+
+for (const dir of packageDirs) {
+  const allow = allowed[dir];
+  if (!allow) {
+    fail("unknown-package", `${dir} has no dependency allow-list entry`);
+    continue;
+  }
   const pkg = readPkg(dir);
   const deps = depsOf(pkg);
+
   for (const dep of Object.keys(deps)) {
-    if (dep.startsWith("@auktake/")) {
-      if (!allow.includes(dep)) fail(`${dir}-deps`, `unexpected internal dep ${dep}`);
-    } else if (!PLATFORM_LIBS.includes(dep)) {
-      // dev tooling (typescript, vitest, eslint...) is fine
-      if (pkg.devDependencies?.[dep] && !dep.startsWith("eslint")) {
-        // allow tooling silently
+    if (!dep.startsWith("@auktake/")) continue;
+    if (!allow.includes(dep)) {
+      if (dep.startsWith("@auktake/plugin-")) {
+        fail("plugin-no-inter-plugin-deps", `${dir} depends on ${dep} (插件间依赖被禁止)`);
+      } else if (dep.startsWith("@auktake/platform-")) {
+        fail("plugin-no-platform-deps", `${dir} depends on ${dep} (storage 经 ServiceRegistry 注入)`);
+      } else {
+        fail(`${dir}-deps`, `unexpected internal dep ${dep}`);
       }
     }
   }
-  // cross-dependence between platform packages is forbidden
-  const internals = Object.keys(deps).filter((d) => d.startsWith("@auktake/"));
-  for (const dep of internals) {
-    if (dep !== "@auktake/core") fail(`${dir}-deps`, `platform packages must only depend on @auktake/core, found ${dep}`);
+
+  // ui-contracts must stay renderer-free beyond the react TYPE peer
+  if (dir === "packages/ui-contracts") {
+    for (const lib of ["react-native", "react-native-web"]) {
+      if (deps[lib]) fail("ui-contracts-no-platform-deps", `${dir} depends on ${lib}`);
+    }
+  }
+
+  // plugins: react系 as peers only; other runtime libs whitelisted
+  if (dir.startsWith("packages/plugin-")) {
+    for (const lib of Object.keys(pkg.dependencies ?? {})) {
+      if (lib.startsWith("@auktake/")) continue;
+      if (PLATFORM_LIBS.includes(lib)) {
+        fail("plugin-platform-lib-in-deps", `${dir} lists ${lib} in dependencies (must be peerDependencies)`);
+      } else if (!PLUGIN_EXTRA_LIBS.includes(lib)) {
+        fail("plugin-unexpected-lib", `${dir} depends on ${lib}`);
+      }
+    }
+  }
+}
+
+// Rule 3: apps may depend on core + platform + ui-nav + ui-contracts + plugins
+for (const app of ["apps/mobile", "apps/desktop"]) {
+  const deps = depsOf(readPkg(app));
+  for (const dep of Object.keys(deps)) {
+    if (
+      dep.startsWith("@auktake/") &&
+      !/^@auktake\/(core|platform-rn|platform-tauri|ui-nav|ui-contracts|plugin-[a-z-]+)$/.test(dep)
+    ) {
+      fail(`${app}-deps`, `unexpected internal dep ${dep}`);
+    }
   }
 }
 

@@ -1,0 +1,77 @@
+name: Test Build (desktop installers)
+
+# Phase 1 手工冒烟用测试包：三平台 Tauri 安装包，产物上传为
+# workflow artifact。正式发布流程（签名/自动更新）后续 Phase 再建。
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "phase-1/**", "phase-2/**", "build/**"]
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS
+          - os: ubuntu-22.04
+            label: Linux
+          - os: windows-latest
+            label: Windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Linux system dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget file \
+            libwebkit2gtk-4.1-dev libssl-dev libxdo-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Inject the TMDB v4 Read Access Token into the built-in channel
+      # (encrypted at rest only applies to user config; the built-in
+      # token ships inside the app binary either way).
+      - name: Inject TMDB v4 token
+        if: env.TMDB_V4_READ_ACCESS_TOKEN != ''
+        run: |
+          printf '{ "apiKey": "", "v4Token": "%s" }' "$TMDB_V4_READ_ACCESS_TOKEN"             > packages/plugin-tmdb/src/builtin-key.json
+        env:
+          TMDB_V4_READ_ACCESS_TOKEN: ${{ secrets.TMDB_V4_READ_ACCESS_TOKEN }}
+
+      - name: Build Tauri bundles
+        working-directory: apps/desktop
+        run: pnpm tauri build
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: AukTake-desktop-${{ matrix.label }}
+          if-no-files-found: error
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/**/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/**/*.app
+            apps/desktop/src-tauri/target/release/bundle/**/*.msi
+            apps/desktop/src-tauri/target/release/bundle/**/*.exe
+            apps/desktop/src-tauri/target/release/bundle/**/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/**/*.deb

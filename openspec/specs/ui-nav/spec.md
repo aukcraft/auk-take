@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the plugin-driven navigation: TabDefinition data model, visibility driven by CapabilityRegistry registration state, navigation state management, and the platform-forked shell skeleton (mobile bottom TabBar / desktop left Sidebar, self-drawn).
+Defines the tab navigation data model (TabDefinition), visibility driven by CapabilityRegistry registration state, and the navigation state shell (bottom TabBar on mobile / left Sidebar on desktop). The shell renders platform skeletons; content components are pulled from the CapabilityRegistry by key.
 
 ## Requirements
 
