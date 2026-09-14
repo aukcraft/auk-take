@@ -65,10 +65,35 @@ export function createRecordsTab(
           <EmptyState openEditor={openEditor} />
         ) : (
           <>
-            <View style={styles.header}>
-              {SearchToolbar ? (
-                <SearchToolbar query={query} onChange={setQuery} />
-              ) : timeline ? (
+            <View style={styles.headerColumn}>
+              <View style={styles.header}>
+                {SearchToolbar ? (
+                  <SearchToolbar query={query} onChange={setQuery} />
+                ) : (
+                  <View style={styles.headerSpacer} />
+                )}
+                <View style={styles.headerActions}>
+                  {openTmdbConfig ? (
+                    <Pressable
+                      style={styles.gearButton}
+                      onPress={() => openTmdbConfig()}
+                      accessibilityLabel="TMDB 设置"
+                    >
+                      <Text style={styles.gearText}>TMDB</Text>
+                    </Pressable>
+                  ) : null}
+                  {openEditor ? (
+                    <Pressable
+                      style={styles.addButton}
+                      onPress={() => openEditor()}
+                      accessibilityLabel="记录观影"
+                    >
+                      <Text style={styles.addButtonText}>＋ 记录</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+              {timeline ? (
                 <View style={styles.segment}>
                   {(
                     [
@@ -87,29 +112,7 @@ export function createRecordsTab(
                     </Pressable>
                   ))}
                 </View>
-              ) : (
-                <View style={styles.headerSpacer} />
-              )}
-              <View style={styles.headerActions}>
-                {openTmdbConfig ? (
-                  <Pressable
-                    style={styles.gearButton}
-                    onPress={() => openTmdbConfig()}
-                    accessibilityLabel="TMDB 设置"
-                  >
-                    <Text style={styles.gearText}>TMDB</Text>
-                  </Pressable>
-                ) : null}
-                {openEditor ? (
-                  <Pressable
-                    style={styles.addButton}
-                    onPress={() => openEditor()}
-                    accessibilityLabel="记录观影"
-                  >
-                    <Text style={styles.addButtonText}>＋ 记录</Text>
-                  </Pressable>
-                ) : null}
-              </View>
+              ) : null}
             </View>
             {visible.length === 0 ? (
               <View style={styles.emptyResults}>
@@ -155,11 +158,11 @@ function EmptyState({ openEditor }: { openEditor: RecordEditCommand | undefined 
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  headerColumn: { gap: spacing.xs, paddingTop: spacing.sm },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
   },
   headerSpacer: { flex: 1 },
   segment: {
