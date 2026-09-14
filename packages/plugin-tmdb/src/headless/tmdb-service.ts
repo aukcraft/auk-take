@@ -17,6 +17,15 @@ import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto
 
 const CONFIG_ID = "tmdb-config";
 
+/** Auto-move misplaced v4 tokens (eyJ... = JWT-shaped) to the v4 slot. */
+export function normalizeConfig(config: TmdbConfig): TmdbConfig {
+  const looksV4 = (value: string) => value.startsWith("eyJ");
+  if (looksV4(config.apiKey) && !config.v4Token) {
+    return { apiKey: "", v4Token: config.apiKey, language: config.language };
+  }
+  return config;
+}
+
 interface StoredConfig {
   readonly id: string;
   readonly schemaVersion: number;
@@ -61,8 +70,13 @@ export class TmdbService {
     return this.config;
   }
 
-  /** Persist with SECRETS ENCRYPTED; plaintext never touches storage. */
-  async saveConfig(config: TmdbConfig): Promise<void> {
+  /**
+   * Persist with SECRETS ENCRYPTED; plaintext never touches storage.
+   * Footprint guard: a v4 token (eyJ...) pasted into the v3 key field
+   * is auto-moved to v4Token instead of 401-ing forever.
+   */
+  async saveConfig(rawConfig: TmdbConfig): Promise<void> {
+    const config = normalizeConfig(rawConfig);
     const rows = await this.deps.storage.loadAll<StoredConfig>(COLLECTIONS.syncMeta);
     const next = rows.filter((r) => r.id !== CONFIG_ID);
     next.push({
@@ -134,7 +148,8 @@ export class TmdbService {
           : await client.searchMovie(query);
       return raw.map((item) => mapCandidate(item, mediaType));
     } catch (error) {
-      if (error instanceof TmdbError && error.kind === "invalid-key") return [];
+      // 401 MUST surface (a swallowed invalid key used to render as
+      // "no results", hiding credential problems)
       throw error;
     }
   }

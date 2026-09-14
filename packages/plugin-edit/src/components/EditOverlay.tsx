@@ -161,6 +161,13 @@ export function createEditOverlay(
                                 const found = await tmdbSearch?.(searchText.trim(), {
                                   mediaType: state.draft.mediaType,
                                 });
+                                console.info(
+                                  "[edit] tmdb search:",
+                                  JSON.stringify(searchText.trim()),
+                                  "->",
+                                  found?.length ?? 0,
+                                  "candidates",
+                                );
                                 setCandidates(found ?? []);
                                 setSearchMessage(
                                   (found ?? []).length === 0

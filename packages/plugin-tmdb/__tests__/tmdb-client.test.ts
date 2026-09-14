@@ -223,3 +223,24 @@ describe("normalizeTitle", () => {
   });
 });
 
+
+describe("normalizeConfig", () => {
+  it("moves an eyJ v4 token misplaced into the v3 key field", async () => {
+    const { normalizeConfig } = await import("../src/headless/tmdb-service");
+    const fixed = normalizeConfig({ apiKey: "eyJhbGci.v4", v4Token: "", language: "zh-CN" });
+    expect(fixed.apiKey).toBe("");
+    expect(fixed.v4Token).toBe("eyJhbGci.v4");
+    const kept = normalizeConfig({ apiKey: "v3key123", v4Token: "", language: "zh-CN" });
+    expect(kept.apiKey).toBe("v3key123");
+  });
+
+  it("invalid-key now THROWS instead of silently returning []", async () => {
+    const service = new TmdbService({
+      storage: new InMemoryStorage(),
+      events: new EventBus(),
+      fetchImpl: (async () => jsonResponse({}, 401)) as unknown as FetchLike,
+    });
+    await service.saveConfig({ apiKey: "BAD", language: "zh-CN" });
+    await expect(service.search("x")).rejects.toMatchObject({ kind: "invalid-key" });
+  });
+});
