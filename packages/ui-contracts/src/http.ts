@@ -10,8 +10,14 @@ export class HttpError extends Error {
     readonly kind: "timeout" | "network" | "status",
     readonly url: string,
     readonly status?: number,
+    /** Underlying platform error message (e.g. "Network request failed"). */
+    readonly detail?: string,
   ) {
-    super(`[http:${kind}] ${status ?? ""} ${url}`.trim());
+    super(
+      [`[http:${kind}]`, status ?? "", detail ?? "", url]
+        .filter((p) => p !== "")
+        .join(" "),
+    );
     this.name = "HttpError";
   }
 }

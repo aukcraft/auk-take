@@ -70,9 +70,10 @@ export function createHttpService(deps: HttpServiceDeps): HttpService {
     const merged: RequestInit = { ...init, signal: signal as RequestInit["signal"] };
     try {
       return await fetchImpl(url, merged);
-    } catch {
+    } catch (error) {
       if (signal.aborted) throw new HttpError("timeout", url);
-      throw new HttpError("network", url);
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new HttpError("network", url, undefined, detail);
     }
   };
 
