@@ -77,3 +77,23 @@ plugin-tag → core + ui-contracts；plugin-search → core + ui-contracts（读
 - 筛选面板的交互形态（底部弹层 vs 头部展开）→ 步骤 4 实现期定（移动底部/桌面展开，同文件分支）
 - 标签颜色/emoji → v1 纯文本 chips，Phase 6 主题化再评估
 - stats 是否在「记录」tab 顶部放年度摘要卡 → 反馈后定，v1 不做
+
+## Implementation Appendix（实现期补充决策）
+
+- **A8 搜索 UI 重设计（用户拍板）**：搜索/筛选合并为单一功能，套件工厂
+  `(props) => [Button, Card]`——Button 为图标入口 + 激活条件可删 pills
+  （× 即删即时过滤），Card 为条件弹窗，v1 仅 AND。query 引擎实现中发现
+  display→plugin-search 违反插件互禁，**上移 ui-contracts**（queryRecords/
+  activeFilterCount/debounce，与 createCollectionProjection 同列共享 headless 工具）。
+- **A9 lucide 图标库**：lucide-react-native（移动，peer react-native-svg）；
+  桌面 vite 别名到 DOM 版 lucide-react（svg web 构建依赖 codegenNativeComponent
+  不可用）。desktop tsconfig moduleSuffixes 收窄为 ['']（无 .web fork；.web
+  后缀使 react-native-svg 类型解析缺失 SvgProps）。
+- **A10 遗留项**：标签重命名/删除的**管理 UI 入口未做**（命令族已注册且
+  8 项单测覆盖删除清洗行为）——冒烟项「删除清洗」无法界面触发，行为由
+  测试保证；入口补在后续 Phase（候选：详情标签 chips 长按 / 设置区）。
+- **A11 时间线 × 筛选**：筛选激活时视图强制回海报墙（timeline 组件数据
+  自持无法吃过滤条件）——已知取舍，后续如需时间线内过滤则为其接入
+  cmd:search。
+- **A12 timeline 切换回归**：搜索工具栏接入时曾把视图切换写成互斥分支
+  导致入口消失，已修为独立两行；教训：头部多能力叠加时禁用三元互斥嵌套。
