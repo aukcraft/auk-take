@@ -60,7 +60,7 @@ export function createStatsView(
     useEffect(() => {
       if (!events || !syncing) return;
       return events.on<JellyfinSyncProgress>(JELLYFIN_EVENTS.syncProgress, (p) => {
-        setSyncMessage(`同步中… 已拉取 ${p.fetched} 条，导入 ${p.imported} 条`);
+        setSyncMessage(`同步中… 第 ${p.page} 页 · 已拉取 ${p.fetched} 条 · 导入 ${p.imported} 条`);
       });
     }, [events, syncing]);
 

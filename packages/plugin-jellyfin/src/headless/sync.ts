@@ -69,6 +69,7 @@ export async function syncJellyfin(
     );
 
     let skip = await deps.cursor.load();
+    const startSkip = skip;
     let fetched = 0;
     let imported = 0;
     let pending: MovieRecord[] = [];
@@ -78,7 +79,6 @@ export async function syncJellyfin(
       await deps.apply(pending);
       imported += pending.length;
       pending = [];
-      deps.onProgress?.({ fetched, imported });
       await sleep(delayMs);
     };
 
@@ -103,9 +103,15 @@ export async function syncJellyfin(
       // failure on dupe-heavy stretches still resumes forward.
       await deps.cursor.save(skip);
       if (pending.length >= batchSize) await flush();
+      // Per-page progress: the fetched counter ticks visibly even when a
+      // page contributes no new records (dupe-heavy resume stretches).
+      // `page` counts pages fetched THIS run (resume starts at page 1).
+      const pageNo = Math.ceil((skip - startSkip) / PAGE_SIZE);
+      deps.onProgress?.({ page: pageNo, fetched, imported });
       if (page.length < PAGE_SIZE) break;
     }
     await flush();
+    deps.onProgress?.({ page: Math.ceil((skip - startSkip) / PAGE_SIZE), fetched, imported });
     // Walk reached the end: the cursor now sits at the tail, where future
     // plays append — the next run resumes there and only fetches deltas.
 

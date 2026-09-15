@@ -166,7 +166,7 @@ describe("syncJellyfin", () => {
     const client = new JellyfinClient({ http, baseUrl: "http://jf", apiKey: "K" });
     const configStore = new JellyfinConfigStore(storage, new EventBus());
     const apply = vi.fn(async (records: readonly MovieRecord[]) => records.length);
-    const progress: { fetched: number; imported: number }[] = [];
+    const progress: { page: number; fetched: number; imported: number }[] = [];
     let seq = 0;
     const deps = {
       client,
@@ -178,7 +178,7 @@ describe("syncJellyfin", () => {
         load: () => configStore.loadCursor("http://jf"),
         save: (skip: number) => configStore.saveCursor("http://jf", skip),
       },
-      onProgress: (p: { fetched: number; imported: number }) => progress.push(p),
+      onProgress: (p: { page: number; fetched: number; imported: number }) => progress.push(p),
       sleep: async () => {},
     };
     return { deps, apply, storage, configStore, progress };
@@ -266,7 +266,7 @@ describe("syncJellyfin batched walk", () => {
     const client = new JellyfinClient({ http, baseUrl: "http://jf", apiKey: "K" });
     const configStore = new JellyfinConfigStore(storage, new EventBus());
     const apply = vi.fn(async (records: readonly MovieRecord[]) => records.length);
-    const progress: { fetched: number; imported: number }[] = [];
+    const progress: { page: number; fetched: number; imported: number }[] = [];
     let seq = 0;
     const deps = {
       client,
@@ -278,7 +278,7 @@ describe("syncJellyfin batched walk", () => {
         load: () => configStore.loadCursor("http://jf"),
         save: (skip: number) => configStore.saveCursor("http://jf", skip),
       },
-      onProgress: (p: { fetched: number; imported: number }) => progress.push(p),
+      onProgress: (p: { page: number; fetched: number; imported: number }) => progress.push(p),
       sleep: async () => {},
       batchSize: opts.batchSize ?? 1000,
     };
@@ -297,9 +297,10 @@ describe("syncJellyfin batched walk", () => {
       500, 500, 200,
     ]);
     expect(progress).toEqual([
-      { fetched: 500, imported: 500 },
-      { fetched: 1000, imported: 1000 },
-      { fetched: 1200, imported: 1200 },
+      { page: 1, fetched: 500, imported: 500 }, // page 1: batch 1 committed
+      { page: 2, fetched: 1000, imported: 1000 }, // page 2: batch 2 committed
+      { page: 3, fetched: 1200, imported: 1000 }, // page 3 (short): 200 pending
+      { page: 3, fetched: 1200, imported: 1200 }, // final flush
     ]);
     expect(await configStore.loadCursor("http://jf")).toBe(1200);
   });

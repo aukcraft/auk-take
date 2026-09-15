@@ -27,8 +27,10 @@ export type JellyfinSyncResult =
 
 export type JellyfinSyncCommand = () => Promise<JellyfinSyncResult>;
 
-/** Payload of JELLYFIN_EVENTS.syncProgress — emitted per committed batch. */
+/** Payload of JELLYFIN_EVENTS.syncProgress — emitted per fetched page. */
 export interface JellyfinSyncProgress {
+  /** 1-based page number of the oldest-first walk just fetched. */
+  readonly page: number;
   /** Items fetched from the server so far in this run. */
   readonly fetched: number;
   /** New records actually imported so far in this run. */
