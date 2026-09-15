@@ -16,6 +16,7 @@
  *   rating, type). v1 combination semantics: AND only.
  */
 import React, { useMemo, useState, useSyncExternalStore } from "react";
+import { Search, X } from "lucide-react-native";
 import {
   Modal,
   Pressable,
@@ -102,7 +103,7 @@ function Pill({ label, onRemove }: { label: string; onRemove: () => void }) {
         {label}
       </Text>
       <Pressable onPress={onRemove} hitSlop={6} accessibilityLabel={`移除条件 ${label}`}>
-        <Text style={styles.pillX}>×</Text>
+        <X size={12} color={colors.textMuted} />
       </Pressable>
     </View>
   );
@@ -176,7 +177,7 @@ function SearchButtonInner({ query, onChange }: SearchSuiteProps) {
         accessibilityLabel="搜索"
         accessibilityRole="button"
       >
-        <Text style={styles.iconText}>⌕</Text>
+        <Search size={17} color={colors.text} />
       </Pressable>
       {(query.tagIds ?? []).map((id) => (
         <Pill
@@ -406,7 +407,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconBtnActive: { borderColor: colors.accent },
-  iconText: { fontSize: 18, color: colors.text, lineHeight: 22 },
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -421,7 +421,6 @@ const styles = StyleSheet.create({
     maxWidth: 220,
   },
   pillText: { fontSize: 12, color: colors.text },
-  pillX: { fontSize: 14, color: colors.textMuted },
   cardOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",

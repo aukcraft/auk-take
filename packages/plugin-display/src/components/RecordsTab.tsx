@@ -4,6 +4,7 @@
  * (spec: 视图切换消费时间线能力).
  */
 import React, { useMemo, useState, useSyncExternalStore } from "react";
+import { KeyRound, Plus } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import type { Projection } from "@auktake/ui-contracts";
@@ -90,7 +91,7 @@ export function createRecordsTab(
                       onPress={() => openTmdbConfig()}
                       accessibilityLabel="TMDB 设置"
                     >
-                      <Text style={styles.gearText}>TMDB</Text>
+                      <KeyRound size={13} color={colors.textMuted} />
                     </Pressable>
                   ) : null}
                   {openEditor ? (
@@ -99,7 +100,8 @@ export function createRecordsTab(
                       onPress={() => openEditor()}
                       accessibilityLabel="记录观影"
                     >
-                      <Text style={styles.addButtonText}>＋ 记录</Text>
+                      <Plus size={14} color="#FFFFFF" />
+                    <Text style={styles.addButtonText}>记录</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -184,6 +186,8 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: "row", gap: spacing.sm },
   gearButton: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
@@ -191,8 +195,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  gearText: { color: colors.textMuted, fontSize: 13 },
   addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,

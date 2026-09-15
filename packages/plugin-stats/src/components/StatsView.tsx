@@ -4,6 +4,7 @@
  * day. Drill-down via cmd:search (degrades to non-tappable).
  */
 import React, { useMemo, useState, useSyncExternalStore } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import {
@@ -77,7 +78,7 @@ export function createStatsView(
             onPress={() => setYear(year - 1)}
             style={styles.yearArrow}
           >
-            <Text style={styles.yearArrowText}>‹</Text>
+            <ChevronLeft size={20} color={colors.text} />
           </Pressable>
           <Text style={styles.yearText}>{year} 年度回顾</Text>
           <Pressable
@@ -85,7 +86,7 @@ export function createStatsView(
             onPress={() => setYear(year + 1)}
             style={styles.yearArrow}
           >
-            <Text style={styles.yearArrowText}>›</Text>
+            <ChevronRight size={20} color={colors.text} />
           </Pressable>
         </View>
 
@@ -174,7 +175,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   yearBar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.lg },
   yearArrow: { padding: spacing.xs },
-  yearArrowText: { fontSize: 22, color: colors.text },
   yearText: { fontSize: 20, fontWeight: fontWeight.bold as never, color: colors.text },
   statsRow: { flexDirection: "row", gap: spacing.sm },
   statBox: {
