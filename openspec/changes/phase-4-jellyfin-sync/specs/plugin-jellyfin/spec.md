@@ -29,17 +29,31 @@ plugin-jellyfin SHALL 提供纯 TS 客户端口（fetch 经 `svc:http`，可 stu
 ### Requirement: 增量同步与去重
 `cmd:jellyfin-sync` SHALL 手动拉取观看历史并**增量导入**：身份 = `source.jellyfin.itemId + playedAt`（schema Phase 0 预留字段），已在本地存在同身份的记录跳过；新条目经 `cmd:record-apply-jellyfin`（edit 内部通道，唯一写入方）批量写入，`source={type:'jellyfin', jellyfin:{itemId, playedAt, playCount}}`。同步结果 SHALL 汇总反馈（新增 N 条 / 无新条目 / 失败明细）。已导入记录不回写、不覆盖本地编辑。
 
+同步 SHALL 采用**分批渐进**策略（大库容错）：按 `DatePlayed` 升序（从远到近）逐页拉取；新条目攒满批次阈值（默认 1000 条）即提交落盘一批，每批提交后发布 `jellyfin:sync-progress` 事件（`{fetched, imported}`）并短暂停顿（默认 150ms）；同步游标（skip 偏移，绑定 baseUrl）SHALL 持久化于 syncMeta 并按页推进。中途失败 SHALL 保留已提交批次与游标，重试从断点续传；游标到达列表尾部后，后续同步仅从尾部拉取新增。
+
 #### Scenario: 首次导入
 - **WHEN** 服务器有 10 条观看历史且本地无 jellyfin 记录
 - **THEN** 导入 10 条，反馈「新增 10 条」
 
 #### Scenario: 重复同步增量
 - **WHEN** 再次同步且服务器仅多 2 条
-- **THEN** 仅导入 2 条，其余 10 条因身份重复跳过，本地对其的编辑不受影响
+- **THEN** 仅从游标位置拉取尾部新增，导入 2 条，其余 10 条因身份重复跳过，本地对其的编辑不受影响
 
 #### Scenario: 写入经唯一通道
 - **WHEN** 导入执行
 - **THEN** 全部新记录经 `cmd:record-apply-jellyfin` 写入（edit 为 records 唯一写入方），每条发布 `record:created`
+
+#### Scenario: 分批提交与进度
+- **WHEN** 一次同步产生 1200 条新记录（批次阈值 500）
+- **THEN** 分 3 批（500/500/200）提交落盘，每批后发布进度事件，游标最终停在 1200
+
+#### Scenario: 断点续传
+- **WHEN** 同步在第二页网络失败
+- **THEN** 第一批已落盘记录保留、游标停在失败页起点；重试从该位置继续且不重复导入
+
+#### Scenario: 换服务器重置游标
+- **WHEN** 配置指向另一台服务器（baseUrl 变化）
+- **THEN** 游标归 0，从头全量扫描
 
 ### Requirement: 元数据映射
 Jellyfin item SHALL 映射为记录快照：`tmdb.id` = ProviderIds.Tmdb（缺失为 0，仍可后续 TMDB 补全）；title = Name（剧集条目 = `SeriesName + SxxExx` 语义：title 取 SeriesName、S/E 取 ParentIndexNumber/IndexNumber）；originalTitle 同 title；overview/genres/runtime（RuntimeTicks→分钟）/releaseDate（PremiereDate→日期）直映；posterPath 留空（色卡/补全管线）。映射为纯函数可测。

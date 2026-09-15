@@ -87,24 +87,37 @@ export class JellyfinClient {
     return users[0];
   }
 
+  private static readonly PLAYED_QUERY: Record<string, string | number> = {
+    Filters: "IsPlayed",
+    Recursive: "true",
+    IncludeItemTypes: "Movie,Episode",
+    Fields: "ProviderIds,Overview,Genres,RuntimeTicks,PremiereDate,SeriesName,ParentIndexNumber,IndexNumber",
+    SortBy: "DatePlayed",
+    // Oldest-first: batched sync walks from the distant past towards now,
+    // so the resume cursor (a skip offset) stays valid as new plays append
+    // at the END of the listing.
+    SortOrder: "Ascending",
+  };
+
+  /** One page of played Movie/Episode items. */
+  async playedItemsPage(
+    userId: string,
+    skip: number,
+    take: number = PAGE_SIZE,
+  ): Promise<readonly JellyfinItem[]> {
+    const page = await this.request<{ Items?: readonly JellyfinItem[] }>(
+      `/Users/${userId}/Items`,
+      { ...JellyfinClient.PLAYED_QUERY, Skip: skip, Take: take },
+    );
+    return page.Items ?? [];
+  }
+
   /** All played Movie/Episode items, paged to completion. */
   async playedItems(userId: string): Promise<readonly JellyfinItem[]> {
-    const base: Record<string, string | number> = {
-      Filters: "IsPlayed",
-      Recursive: "true",
-      IncludeItemTypes: "Movie,Episode",
-      Fields: "ProviderIds,Overview,Genres,RuntimeTicks,PremiereDate,SeriesName,ParentIndexNumber,IndexNumber",
-      SortBy: "DatePlayed",
-      SortOrder: "Descending",
-    };
     const out: JellyfinItem[] = [];
     let skip = 0;
     for (;;) {
-      const page = await this.request<{ Items?: readonly JellyfinItem[] }>(
-        `/Users/${userId}/Items`,
-        { ...base, Skip: skip, Take: PAGE_SIZE },
-      );
-      const items = page.Items ?? [];
+      const items = await this.playedItemsPage(userId, skip);
       out.push(...items);
       if (items.length < PAGE_SIZE) break;
       skip += PAGE_SIZE;

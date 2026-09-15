@@ -16,6 +16,7 @@
 - [x] 3.3 `mapItemToRecord`：电影/剧集（SeriesName+S/E）/tmdb.id 取 ProviderIds/RTicks→分钟/PremiereDate/LastPlayedDate→watchedAt/playCount + 全矩阵单测；`jellyfinIdentity` 身份键
 - [x] 3.4 `JellyfinConfigStore`：syncMeta 加密存取（Key 密文/URL 明文）+ 单测（round-trip、遗留明文兼容）
 - [x] 3.5 `syncJellyfin` 编排：未配置报错 → 拉取 → 身份去重 → 经注入通道写入 → 结果汇总 + 单测（首次导入 N / 增量 / 无 playedAt 跳过 / 通道缺失报错）
+- [x] 3.6 分批游标同步（冒烟修订）：升序从远到近、batchSize 批提交 + `jellyfin:sync-progress` 事件 + 批间停顿、游标持久化（绑定 baseUrl）、断点续传 + 单测（分批提交与进度/游标续拉增量/中途失败续传/换服重置）；StatsView 实时进度显示
 
 ## 4. plugin-edit 导入通道
 

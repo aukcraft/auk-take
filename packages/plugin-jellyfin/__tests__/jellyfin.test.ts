@@ -142,6 +142,15 @@ describe("JellyfinConfigStore", () => {
     const loaded = await store.load();
     expect(loaded).toEqual({ baseUrl: "http://jf.example", apiKey: "PLAIN" });
   });
+
+  it("cursor round-trips and resets when the server URL changes", async () => {
+    const storage = new InMemoryStorage();
+    const store = new JellyfinConfigStore(storage, new EventBus());
+    expect(await store.loadCursor("http://jf")).toBe(0);
+    await store.saveCursor("http://jf/", 1500);
+    expect(await store.loadCursor("http://jf")).toBe(1500);
+    expect(await store.loadCursor("http://other-server")).toBe(0);
+  });
 });
 
 describe("syncJellyfin", () => {
@@ -155,7 +164,9 @@ describe("syncJellyfin", () => {
       return {};
     });
     const client = new JellyfinClient({ http, baseUrl: "http://jf", apiKey: "K" });
+    const configStore = new JellyfinConfigStore(storage, new EventBus());
     const apply = vi.fn(async (records: readonly MovieRecord[]) => records.length);
+    const progress: { fetched: number; imported: number }[] = [];
     let seq = 0;
     const deps = {
       client,
@@ -163,8 +174,14 @@ describe("syncJellyfin", () => {
       apply,
       generateId: () => `jf-${++seq}`,
       now: () => NOW,
+      cursor: {
+        load: () => configStore.loadCursor("http://jf"),
+        save: (skip: number) => configStore.saveCursor("http://jf", skip),
+      },
+      onProgress: (p: { fetched: number; imported: number }) => progress.push(p),
+      sleep: async () => {},
     };
-    return { deps, apply, storage };
+    return { deps, apply, storage, configStore, progress };
   }
 
   it("unconfigured -> explicit error", async () => {
@@ -207,5 +224,118 @@ describe("syncJellyfin", () => {
     });
     const result = await syncJellyfin(deps, true);
     expect(result).toMatchObject({ status: "error", message: "boom" });
+  });
+});
+
+describe("syncJellyfin batched walk", () => {
+  const makeItems = (n: number, offset = 0): JellyfinItem[] =>
+    Array.from({ length: n }, (_, i) => ({
+      ...movieItem,
+      Id: `m${offset + i}`,
+      UserData: {
+        LastPlayedDate: `2020-01-01T00:00:${String((offset + i) % 60).padStart(2, "0")}Z`,
+        PlayCount: 1,
+        Played: true,
+      },
+    }));
+
+  /** Paged stub honoring Skip/Take; can fail once at a chosen skip. */
+  function pagedHttp(all: readonly JellyfinItem[], failAtSkip?: number) {
+    const requests: string[] = [];
+    const http = vi.fn(async (url: string): Promise<Response> => {
+      requests.push(url);
+      if (url.endsWith("/Users")) return jsonResponse([{ Id: "u1" }]);
+      const u = new URL(url);
+      const skip = Number(u.searchParams.get("Skip") ?? 0);
+      const take = Number(u.searchParams.get("Take") ?? 500);
+      if (failAtSkip !== undefined && skip === failAtSkip) {
+        throw new Error("connection reset");
+      }
+      return jsonResponse({ Items: all.slice(skip, skip + take) });
+    });
+    return { http: http as unknown as (url: string) => Promise<Response>, requests };
+  }
+
+  async function pagedSetup(
+    all: readonly JellyfinItem[],
+    opts: { failAtSkip?: number; batchSize?: number; existing?: readonly MovieRecord[] } = {},
+  ) {
+    const storage = new InMemoryStorage();
+    await storage.persistAll(COLLECTIONS.records, [...(opts.existing ?? [])]);
+    const { http, requests } = pagedHttp(all, opts.failAtSkip);
+    const client = new JellyfinClient({ http, baseUrl: "http://jf", apiKey: "K" });
+    const configStore = new JellyfinConfigStore(storage, new EventBus());
+    const apply = vi.fn(async (records: readonly MovieRecord[]) => records.length);
+    const progress: { fetched: number; imported: number }[] = [];
+    let seq = 0;
+    const deps = {
+      client,
+      storage,
+      apply,
+      generateId: () => `jf-${++seq}`,
+      now: () => NOW,
+      cursor: {
+        load: () => configStore.loadCursor("http://jf"),
+        save: (skip: number) => configStore.saveCursor("http://jf", skip),
+      },
+      onProgress: (p: { fetched: number; imported: number }) => progress.push(p),
+      sleep: async () => {},
+      batchSize: opts.batchSize ?? 1000,
+    };
+    return { deps, apply, storage, configStore, progress, requests };
+  }
+
+  it("commits in batches with progress events and lands the cursor at the end", async () => {
+    const { deps, apply, configStore, progress } = await pagedSetup(makeItems(1200), {
+      batchSize: 500,
+    });
+    const result = await syncJellyfin(deps, true);
+    expect(result).toEqual({ status: "imported", count: 1200 });
+    // 500 + 500 + 200 -> three commits
+    expect(apply).toHaveBeenCalledTimes(3);
+    expect(apply.mock.calls.map((c) => (c[0] as readonly MovieRecord[]).length)).toEqual([
+      500, 500, 200,
+    ]);
+    expect(progress).toEqual([
+      { fetched: 500, imported: 500 },
+      { fetched: 1000, imported: 1000 },
+      { fetched: 1200, imported: 1200 },
+    ]);
+    expect(await configStore.loadCursor("http://jf")).toBe(1200);
+  });
+
+  it("resumes from the persisted cursor and only fetches the delta", async () => {
+    const first = await pagedSetup(makeItems(600));
+    expect(await syncJellyfin(first.deps, true)).toEqual({ status: "imported", count: 600 });
+
+    // two new plays append at the tail of the oldest-first listing
+    const second = await pagedSetup(makeItems(602), {
+      existing: mapItems(makeItems(600), () => "x", NOW),
+    });
+    await second.configStore.saveCursor("http://jf", 600);
+    const result = await syncJellyfin(second.deps, true);
+    expect(result).toEqual({ status: "imported", count: 2 });
+    const firstItemsRequest = second.requests.find((u) => u.includes("/Items"));
+    expect(new URL(firstItemsRequest!).searchParams.get("Skip")).toBe("600");
+  });
+
+  it("mid-walk failure keeps committed batches; retry resumes from the cursor", async () => {
+    const failing = await pagedSetup(makeItems(1200), { failAtSkip: 500, batchSize: 500 });
+    const result = await syncJellyfin(failing.deps, true);
+    expect(result.status).toBe("error");
+    expect(failing.apply).toHaveBeenCalledTimes(1); // first batch committed
+    expect(await failing.configStore.loadCursor("http://jf")).toBe(500);
+
+    const retried = await pagedSetup(makeItems(1200), {
+      batchSize: 500,
+      existing: mapItems(makeItems(500), () => "x", NOW),
+    });
+    await retried.configStore.saveCursor("http://jf", 500);
+    const result2 = await syncJellyfin(retried.deps, true);
+    expect(result2).toEqual({ status: "imported", count: 700 });
+    const skips = retried.requests
+      .filter((u) => u.includes("/Items"))
+      .map((u) => new URL(u).searchParams.get("Skip"));
+    expect(skips[0]).toBe("500");
   });
 });

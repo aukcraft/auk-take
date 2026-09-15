@@ -19,6 +19,14 @@ interface StoredConfig {
 }
 
 const CONFIG_ID = "jellyfin-config";
+const CURSOR_ID = "jellyfin-sync-cursor";
+
+interface StoredCursor {
+  readonly id: string;
+  readonly schemaVersion: number;
+  readonly baseUrl?: string;
+  readonly skip?: number;
+}
 
 export class JellyfinConfigStore {
   constructor(
@@ -45,6 +53,24 @@ export class JellyfinConfigStore {
       baseUrl: config.baseUrl.replace(/\/+$/, ""),
       apiKey: encryptSecret(config.apiKey),
     });
+    await this.storage.persistAll(COLLECTIONS.syncMeta, next);
+  }
+
+  /**
+   * Batched-sync resume cursor: the skip offset of the oldest-first walk.
+   * Bound to baseUrl — pointing at a different server silently resets to 0.
+   */
+  async loadCursor(baseUrl: string): Promise<number> {
+    const rows = await this.storage.loadAll<StoredCursor>(COLLECTIONS.syncMeta);
+    const stored = rows.find((r) => r.id === CURSOR_ID);
+    if (!stored || stored.baseUrl !== baseUrl.replace(/\/+$/, "")) return 0;
+    return stored.skip ?? 0;
+  }
+
+  async saveCursor(baseUrl: string, skip: number): Promise<void> {
+    const rows = await this.storage.loadAll<StoredCursor>(COLLECTIONS.syncMeta);
+    const next = rows.filter((r) => r.id !== CURSOR_ID);
+    next.push({ id: CURSOR_ID, schemaVersion: 1, baseUrl: baseUrl.replace(/\/+$/, ""), skip });
     await this.storage.persistAll(COLLECTIONS.syncMeta, next);
   }
 

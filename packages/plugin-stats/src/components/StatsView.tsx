@@ -3,14 +3,16 @@
  * bars (no chart library — design D5), genre/tag distributions, top
  * day. Drill-down via cmd:search (degrades to non-tappable).
  */
-import React, { useMemo, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronLeft, ChevronRight, CloudDownload, Settings } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
+import type { CapabilityRegistry, EventBus, MovieRecord } from "@auktake/core";
 import {
   CAPABILITY_KEYS,
+  JELLYFIN_EVENTS,
   colors,
   type JellyfinSyncCommand,
+  type JellyfinSyncProgress,
   type JellyfinSyncResult,
   fontWeight,
   radius,
@@ -36,6 +38,7 @@ export function createStatsView(
   projection: Projection<MovieRecord>,
   capabilities: CapabilityRegistry,
   dev: boolean,
+  events?: EventBus,
 ): React.ComponentType {
   return function StatsView() {
     const records = useSyncExternalStore(
@@ -51,6 +54,16 @@ export function createStatsView(
     const jellyfinConfigure = capabilities.get<() => void>(CAPABILITY_KEYS.jellyfinConfigure);
     const [syncing, setSyncing] = useState(false);
     const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+    // Live batch progress while a sync runs (jellyfin plugin emits after
+    // each committed batch; large libraries import gradually).
+    useEffect(() => {
+      if (!events || !syncing) return;
+      return events.on<JellyfinSyncProgress>(JELLYFIN_EVENTS.syncProgress, (p) => {
+        setSyncMessage(`同步中… 已拉取 ${p.fetched} 条，导入 ${p.imported} 条`);
+      });
+    }, [events, syncing]);
+
     const runSync = async (): Promise<void> => {
       if (!jellyfinSync) return;
       setSyncing(true);

@@ -8,6 +8,7 @@ import { ulid } from "ulid";
 import {
   CAPABILITY_KEYS,
   HTTP_SERVICE,
+  JELLYFIN_EVENTS,
   STORAGE_SERVICE,
   type HttpService,
   type JellyfinSyncCommand,
@@ -65,6 +66,12 @@ export function createJellyfinPlugin(deps: PluginRuntimeDeps): AukPlugin {
               }),
             generateId: ulid,
             now: () => new Date().toISOString(),
+            cursor: {
+              load: () => configStore.loadCursor(config.baseUrl),
+              save: (skip) => configStore.saveCursor(config.baseUrl, skip),
+            },
+            onProgress: (progress) =>
+              deps.events.emit(JELLYFIN_EVENTS.syncProgress, progress),
           },
           config.baseUrl.length > 0 && config.apiKey.length > 0,
         );

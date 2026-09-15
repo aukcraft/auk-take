@@ -27,6 +27,14 @@ export type JellyfinSyncResult =
 
 export type JellyfinSyncCommand = () => Promise<JellyfinSyncResult>;
 
+/** Payload of JELLYFIN_EVENTS.syncProgress — emitted per committed batch. */
+export interface JellyfinSyncProgress {
+  /** Items fetched from the server so far in this run. */
+  readonly fetched: number;
+  /** New records actually imported so far in this run. */
+  readonly imported: number;
+}
+
 /** edit-side bulk import channel (records must be source.type=jellyfin). */
 export type RecordApplyJellyfinCommand = (
   records: readonly MovieRecord[],

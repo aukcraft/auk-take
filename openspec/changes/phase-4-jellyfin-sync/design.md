@@ -39,16 +39,18 @@ Phase 1–3 交付了手动录入、TMDB 元数据、标签/搜索/统计的完�
 - `source = {type:'jellyfin', jellyfin:{itemId: item.Id, playedAt, playCount: UserData?.PlayCount ?? 1}}`
 - 身份键函数 `jellyfinIdentity(record)` = `${itemId}@${playedAt}`
 
-### D3. 增量同步流程（headless `syncJellyfin`）
+### D3. 增量同步流程（headless `syncJellyfin`，分批游标式）
+
+> 修订（冒烟反馈）：原「一次性全量拉取再写入」在大库（1.6 万+ 条观看历史）上会被服务器/反代在深分页处断连（`http:network`）。改为**分批渐进**：升序（从远到近）逐页拉取、按批提交、游标持久化、批间停顿、进度事件。
 
 1. 读配置（解密）→ 未配置 `{status:'error', message:'未配置'}`
-2. `currentUser()` + `playedItems()`（分页全量）
-3. 读本地 records（storage:read 投影快照），构造身份集合
-4. 过滤新条目（`mapItemToRecord` 后按身份去重 + 过滤无 playedAt 条目）
-5. 经注入的 `applyJellyfin(records)`（即 edit 的 `cmd:record-apply-jellyfin`）写入
-6. 返回 `{status:'imported', count}` / `{status:'noop'}` / `{status:'error', message}`
+2. `currentUser()` 确认用户
+3. 读本地 records（storage:read 投影快照），构造身份集合；从 syncMeta 读**同步游标**（`{id:'jellyfin-sync-cursor', baseUrl, skip}`，baseUrl 不一致即归 0——换服务器自动重扫）
+4. 升序（`SortBy=DatePlayed&SortOrder=Ascending`）从 `skip=cursor` 逐页拉取（Take=500）：每页映射去重（无 playedAt 跳过）累积新条目；**攒满 batchSize（默认 1000 条新记录）即经 `applyJellyfin` 提交一批**、发 `jellyfin:sync-progress` 事件（`{fetched, imported}`）、停顿 `interBatchDelayMs`（默认 150ms）；每页结束即持久化游标（skip 按原始抓取数推进，含被跳过的条目）
+5. 短页（<Take）收尾：提交残余批次，游标停在尾部——新增观看记录在升序列表尾部追加，下次同步从游标续拉即增量
+6. 返回 `{status:'imported', count}` / `{status:'noop'}` / `{status:'error', message}`；**中途失败保留已提交批次与游标，重试从断点续传**（身份去重幂等）
 
-edit 侧通道：`writer.importJellyfin(records)`——校验 `source.type==='jellyfin'`（防御）、loadAll→合并→persistAll→逐条 emit `record:created`，返回写入数。
+edit 侧通道：`writer.importJellyfin(records)`——校验 `source.type==='jellyfin'`（防御，原子拒绝：任一非法整批不写）、loadAll→合并→persistAll→逐条 emit `record:created`，返回写入数。
 
 ### D4. 配置与 UI
 
@@ -71,7 +73,8 @@ plugin-tmdb 的 `defaultFetch` 改为：组合根或 create 期 `services.get(HT
 
 - [API Key 权限范围大（等同管理员）] → 文档提示可创建受限用户专用 Key；v1 接受
 - [LastPlayedDate 语义 = 最后播放时间，非首次] → 重看场景 playedAt 取最近值；与 AukTake「一次观看一条记录」语义的完全对齐需 Jellyfin ActivityLog（v2 评估），v1 以 IsPlayed+LastPlayedDate 为准并在 design 记账
-- [超大库分页耗时] → Take=500 + 手动触发可接受；进度反馈 v1 仅 loading→结果
+- [超大库分页耗时] → ~~Take=500 + 手动触发可接受~~ 冒烟实测 1.6 万条库在深分页处被断连 → 已改分批游标同步（D3 修订）；进度经 `jellyfin:sync-progress` 事件实时反馈
+- [游标漂移：服务器删除旧历史会移动 skip 偏移] → 身份去重防重复导入；漏导条目可通过换绑/重置游标重扫（v1 接受，重置入口后续按需）
 - [svc:http 与消费者装配顺序耦合] → 消费者按缺失回退设计，顺序错乱仅损失重试，不崩
 
 ## Migration Plan

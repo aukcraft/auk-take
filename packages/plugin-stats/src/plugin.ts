@@ -35,7 +35,7 @@ export function createStatsPlugin(deps: PluginRuntimeDeps): AukPlugin {
 
       deps.capabilities.register(
         TAB_CAPABILITY_KEYS.profile,
-        createStatsView(projection, deps.capabilities, deps.dev === true),
+        createStatsView(projection, deps.capabilities, deps.dev === true, deps.events),
       );
 
       return {

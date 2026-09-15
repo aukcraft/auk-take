@@ -74,6 +74,12 @@ export const OVERLAY_KEYS: readonly CapabilityKey[] = [
   CAPABILITY_KEYS.overlayJellyfin,
 ];
 
+/** Jellyfin sync progress events published by the jellyfin plugin (Phase 4 batched sync). */
+export const JELLYFIN_EVENTS = {
+  /** Emitted after each committed batch; payload: JellyfinSyncProgress. */
+  syncProgress: "jellyfin:sync-progress",
+} as const;
+
 /** Tag collection change events published by the tag plugin (sole writer). */
 export const TAG_EVENTS = {
   created: "tag:created",
