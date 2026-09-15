@@ -241,6 +241,24 @@ export class RecordsWriter {
     return changed;
   }
 
+  /**
+   * cmd:record-apply-jellyfin: bulk import of jellyfin-sourced records
+   * (defensive: non-jellyfin sources are rejected). Returns the count
+   * actually written. edit stays the sole records writer.
+   */
+  async importJellyfin(records: readonly MovieRecord[]): Promise<number> {
+    if (records.some((r) => r.source.type !== "jellyfin")) {
+      throw new Error("importJellyfin: 仅接受 source.type='jellyfin' 的记录");
+    }
+    if (records.length === 0) return 0;
+    const existing = await this.loadAll();
+    await this.deps.storage.persistAll(COLLECTIONS.records, [...existing, ...records]);
+    for (const record of records) {
+      this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.created, { id: record.id });
+    }
+    return records.length;
+  }
+
   async remove(id: string): Promise<boolean> {
     const records = await this.loadAll();
     const next = records.filter((r) => r.id !== id);

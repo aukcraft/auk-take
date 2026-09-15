@@ -13,7 +13,7 @@ import {
 import { TmdbClient, TmdbError, type FetchLike, type RawSearchItem } from "./tmdb-client";
 import { buildEpisodeSnapshot, buildMovieSnapshotFull } from "./snapshot";
 import builtinKey from "../builtin-key.json";
-import { decryptSecret, encryptSecret, isEncryptedSecret } from "./secret-crypto";
+import { decryptSecret, encryptSecret, isEncryptedSecret } from "@auktake/ui-contracts";
 
 const CONFIG_ID = "tmdb-config";
 

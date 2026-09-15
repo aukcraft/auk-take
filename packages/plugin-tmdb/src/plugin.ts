@@ -8,6 +8,7 @@ import { COLLECTIONS, type AukPlugin, type MovieRecord, type Storage, type TmdbS
 import {
   CAPABILITY_KEYS,
   FS_SERVICE,
+  HTTP_SERVICE,
   IMAGE_CACHE_SERVICE,
   type ImageCacheService,
   type PluginRuntimeDeps,
@@ -52,10 +53,15 @@ export function createTmdbPlugin(
 
     create() {
       const storage = deps.services.require<Storage>("storage");
+      // Phase 4: prefer svc:http (timeout/retry/logging); bare fetch fallback.
+      const http = deps.services.get<import("@auktake/ui-contracts").HttpService>(HTTP_SERVICE);
+      if (http === undefined && deps.dev) {
+        console.warn("[tmdb] svc:http absent — using bare fetch (no timeout/retry)");
+      }
       const service = new TmdbService({
         storage,
         events: deps.events,
-        fetchImpl: defaultFetch,
+        fetchImpl: http ?? defaultFetch,
       });
       const ui = new TmdbUiStore();
       void service.loadConfig();
@@ -165,7 +171,7 @@ export function createTmdbPlugin(
       if (fs && options.cacheDir) {
         const raw = new ImageCache({
           fs,
-          fetchImpl: defaultFetch,
+          fetchImpl: http ?? defaultFetch,
           cacheDir: options.cacheDir,
         });
         const toUri = options.toRenderUri ?? ((p: string) => p);

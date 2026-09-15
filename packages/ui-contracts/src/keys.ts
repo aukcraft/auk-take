@@ -46,6 +46,14 @@ export const CAPABILITY_KEYS = {
   search: "cmd:search",
   /** search plugin: toolbar component consumed by the records tab. */
   searchToolbar: "ui:search-toolbar",
+  /** jellyfin plugin: manual incremental sync of watch history. */
+  jellyfinSync: "cmd:jellyfin-sync",
+  /** jellyfin plugin: open the server/credential config dialog. */
+  jellyfinConfigure: "cmd:jellyfin-configure",
+  /** jellyfin plugin: global config overlay component. */
+  overlayJellyfin: "ui:overlay:jellyfin",
+  /** edit plugin (internal channel): bulk-import jellyfin records. */
+  recordApplyJellyfin: "cmd:record-apply-jellyfin",
   /** tmdb plugin: resolve a picked candidate into a full TmdbSnapshot. */
   tmdbCandidateSnapshot: "cmd:tmdb-candidate-snapshot",
   /** tmdb plugin: sync credential status probe (configured or not). */
@@ -63,6 +71,7 @@ export const OVERLAY_KEYS: readonly CapabilityKey[] = [
   CAPABILITY_KEYS.overlayRoot,
   CAPABILITY_KEYS.overlayRecordDetail,
   CAPABILITY_KEYS.overlayTmdbBackfill,
+  CAPABILITY_KEYS.overlayJellyfin,
 ];
 
 /** Tag collection change events published by the tag plugin (sole writer). */
@@ -91,6 +100,9 @@ export const STORAGE_SERVICE = "storage";
 
 /** ServiceRegistry name for the poster image cache (optional, Phase 2). */
 export const IMAGE_CACHE_SERVICE = "svc:image-cache";
+
+/** ServiceRegistry name for the shared HTTP wrapper (Phase 4). */
+export const HTTP_SERVICE = "svc:http";
 
 /** ServiceRegistry name for a binary fs port (optional; desktop only). */
 export const FS_SERVICE = "fs";

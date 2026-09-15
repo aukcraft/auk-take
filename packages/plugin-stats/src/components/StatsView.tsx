@@ -4,12 +4,14 @@
  * day. Drill-down via cmd:search (degrades to non-tappable).
  */
 import React, { useMemo, useState, useSyncExternalStore } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, CloudDownload, Settings } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import {
   CAPABILITY_KEYS,
   colors,
+  type JellyfinSyncCommand,
+  type JellyfinSyncResult,
   fontWeight,
   radius,
   spacing,
@@ -45,6 +47,24 @@ export function createStatsView(
 
     const tagList = capabilities.get<TagListCommand>(CAPABILITY_KEYS.tagList);
     const search = capabilities.get<SearchCommand>(CAPABILITY_KEYS.search);
+    const jellyfinSync = capabilities.get<JellyfinSyncCommand>(CAPABILITY_KEYS.jellyfinSync);
+    const jellyfinConfigure = capabilities.get<() => void>(CAPABILITY_KEYS.jellyfinConfigure);
+    const [syncing, setSyncing] = useState(false);
+    const [syncMessage, setSyncMessage] = useState<string | null>(null);
+    const runSync = async (): Promise<void> => {
+      if (!jellyfinSync) return;
+      setSyncing(true);
+      setSyncMessage(null);
+      const result: JellyfinSyncResult = await jellyfinSync();
+      setSyncing(false);
+      setSyncMessage(
+        result.status === "imported"
+          ? `已从 Jellyfin 导入 ${result.count} 条记录`
+          : result.status === "noop"
+            ? "没有新的观看记录"
+            : `同步失败：${result.message}`,
+      );
+    };
     if (search === undefined && dev) {
       console.warn(`[stats] drill-down disabled: "${CAPABILITY_KEYS.search}" not registered`);
     }
@@ -165,6 +185,32 @@ export function createStatsView(
             </Text>
           </>
         ) : null}
+
+        <View style={styles.jfRow}>
+          {jellyfinSync ? (
+            <Pressable
+              style={[styles.jfButton, syncing && { opacity: 0.6 }]}
+              disabled={syncing}
+              onPress={() => void runSync()}
+              accessibilityLabel="从 Jellyfin 导入"
+            >
+              <CloudDownload size={15} color="#FFFFFF" />
+              <Text style={styles.jfButtonText}>
+                {syncing ? "同步中…" : "从 Jellyfin 导入"}
+              </Text>
+            </Pressable>
+          ) : null}
+          {jellyfinConfigure ? (
+            <Pressable
+              style={styles.jfGear}
+              onPress={() => jellyfinConfigure()}
+              accessibilityLabel="Jellyfin 设置"
+            >
+              <Settings size={16} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+        {syncMessage ? <Text style={styles.jfMessage}>{syncMessage}</Text> : null}
       </ScrollView>
     );
   };
@@ -206,4 +252,21 @@ const styles = StyleSheet.create({
   chipTappable: { borderColor: colors.accent },
   chipText: { fontSize: 13, color: colors.text },
   drillHint: { fontSize: 12, color: colors.textMuted },
+  jfRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
+  jfButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+  },
+  jfButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: fontWeight.medium as never },
+  jfGear: {
+    padding: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  jfMessage: { fontSize: 12, color: colors.textMuted },
 });

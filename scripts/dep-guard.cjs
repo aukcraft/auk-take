@@ -74,7 +74,9 @@ const allowed = {
   "packages/plugin-record": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-timeline": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-tmdb": ["@auktake/core", "@auktake/ui-contracts"],
+  "packages/plugin-network": ["@auktake/core", "@auktake/ui-contracts"],
   "packages/plugin-tag": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-jellyfin": ["@auktake/core", "@auktake/ui-contracts"],
   "packages/plugin-search": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-stats": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
 };
