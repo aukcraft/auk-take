@@ -6,6 +6,7 @@
  * cmd:record-detail / cmd:record-edit with graceful degradation.
  */
 import React, { useMemo, useState, useSyncExternalStore } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import {
   Modal,
   Platform,
@@ -170,7 +171,7 @@ export function createCalendarView(
             onPress={() => setYear(year - 1)}
             style={styles.yearArrow}
           >
-            <Text style={styles.yearArrowText}>‹</Text>
+            <ChevronLeft size={20} color={colors.text} />
           </Pressable>
           <Text style={styles.yearText}>{year}</Text>
           <Pressable
@@ -178,7 +179,7 @@ export function createCalendarView(
             onPress={() => setYear(year + 1)}
             style={styles.yearArrow}
           >
-            <Text style={styles.yearArrowText}>›</Text>
+            <ChevronRight size={20} color={colors.text} />
           </Pressable>
         </View>
         {Platform.OS === "web" ? (
@@ -220,7 +221,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   yearArrow: { padding: spacing.xs },
-  yearArrowText: { fontSize: 22, color: colors.text },
   yearText: { fontSize: 18, fontWeight: fontWeight.bold as never, color: colors.text },
   hscroll: { paddingHorizontal: spacing.md },
   flat: { alignItems: "center", padding: spacing.md },

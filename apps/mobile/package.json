@@ -15,13 +15,18 @@
     "@auktake/plugin-display": "workspace:*",
     "@auktake/plugin-edit": "workspace:*",
     "@auktake/plugin-record": "workspace:*",
+    "@auktake/plugin-search": "workspace:*",
+    "@auktake/plugin-stats": "workspace:*",
+    "@auktake/plugin-tag": "workspace:*",
     "@auktake/plugin-timeline": "workspace:*",
     "@auktake/plugin-tmdb": "workspace:*",
     "@auktake/ui-contracts": "workspace:*",
     "@auktake/ui-nav": "workspace:*",
     "@babel/runtime": "^7.26.0",
+    "lucide-react-native": "^0.454.0",
     "react": "18.3.1",
-    "react-native": "0.87.0"
+    "react-native": "0.87.0",
+    "react-native-svg": "^15.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

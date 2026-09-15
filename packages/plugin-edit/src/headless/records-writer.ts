@@ -57,7 +57,7 @@ export function buildManualSnapshot(
       watchedAt: draft.watchedAt,
       rating: draft.rating,
       review: draft.review,
-      tags: [],
+      tags: [...draft.tagIds],
     },
     source: { type: "manual" },
     mediaCache: {},
@@ -212,6 +212,33 @@ export class RecordsWriter {
     next[index] = { ...existing, mediaCache: { ...existing.mediaCache, poster: local } };
     await this.deps.storage.persistAll(COLLECTIONS.records, next);
     this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.updated, { id });
+  }
+
+  /**
+   * cmd:record-remove-tag: strip a tag id from EVERY record that
+   * references it (tag-delete cleanup; edit stays the sole writer).
+   * Returns the number of changed records.
+   */
+  async removeTagFromAll(tagId: string): Promise<number> {
+    const records = await this.loadAll();
+    let changed = 0;
+    const next = records.map((record) => {
+      if (!record.user.tags.includes(tagId)) return record;
+      changed += 1;
+      return {
+        ...record,
+        user: { ...record.user, tags: record.user.tags.filter((t) => t !== tagId) },
+        updatedAt: this.deps.now(),
+      };
+    });
+    if (changed === 0) return 0;
+    await this.deps.storage.persistAll(COLLECTIONS.records, next);
+    for (const record of next) {
+      if (!record.user.tags.includes(tagId) && records.find((r) => r.id === record.id)?.user.tags.includes(tagId)) {
+        this.deps.events.emit<RecordEventPayload>(RECORD_EVENTS.updated, { id: record.id });
+      }
+    }
+    return changed;
   }
 
   async remove(id: string): Promise<boolean> {

@@ -21,7 +21,9 @@ const root = path.resolve(__dirname, "..");
 const failures = [];
 
 const PLATFORM_LIBS = [
+  "lucide-react-native",
   "react",
+  "react-native-svg",
   "react-dom",
   "react-native",
   "react-native-web",
@@ -32,7 +34,7 @@ const PLATFORM_LIBS = [
 ];
 
 // runtime libs a plugin may depend on beyond @auktake/* (ulid: edit's record ids)
-const PLUGIN_EXTRA_LIBS = ["ulid"];
+const PLUGIN_EXTRA_LIBS = ["ulid", "lucide-react-native", "react-native-svg"];
 
 const readPkg = (p) => JSON.parse(fs.readFileSync(path.join(root, p, "package.json"), "utf8"));
 const depsOf = (pkg) => ({
@@ -72,6 +74,9 @@ const allowed = {
   "packages/plugin-record": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-timeline": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
   "packages/plugin-tmdb": ["@auktake/core", "@auktake/ui-contracts"],
+  "packages/plugin-tag": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-search": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
+  "packages/plugin-stats": ["@auktake/core", "@auktake/ui-contracts", "@auktake/ui-nav"],
 };
 
 const packageDirs = fs

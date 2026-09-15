@@ -3,19 +3,24 @@
  * switch + empty state CTA. Local view preference is memory-only
  * (spec: 视图切换消费时间线能力).
  */
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useMemo, useState, useSyncExternalStore } from "react";
+import { KeyRound, Plus } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import type { Projection } from "@auktake/ui-contracts";
 import {
   CAPABILITY_KEYS,
+  activeFilterCount,
   colors,
+  queryRecords,
   fontWeight,
   radius,
   spacing,
   type RecordEditCommand,
+  type RecordQuery,
   type TimelineComponent,
 } from "@auktake/ui-contracts";
+
 import { PosterWall } from "./PosterWall";
 
 type ViewId = "poster" | "timeline";
@@ -31,6 +36,9 @@ export function createRecordsTab(
       projection.getState.bind(projection),
     );
     const [view, setView] = useState<ViewId>("poster");
+    // Filter state is display-owned (design D3); the ENGINE comes from
+    // the search plugin via cmd:search when registered, else identity.
+    const [query, setQuery] = useState<RecordQuery>({});
 
     const timeline = capabilities.get<TimelineComponent>(CAPABILITY_KEYS.viewTimeline);
     if (timeline === undefined && dev) {
@@ -41,14 +49,63 @@ export function createRecordsTab(
 
     const openEditor = capabilities.get<RecordEditCommand>(CAPABILITY_KEYS.recordEdit);
     const openTmdbConfig = capabilities.get<() => void>(CAPABILITY_KEYS.tmdbConfigure);
+    const makeSuite = capabilities.get<
+      (props: { query: RecordQuery; onChange: (next: RecordQuery) => void }) => readonly [
+        React.ComponentType,
+        React.ComponentType,
+      ]
+    >(CAPABILITY_KEYS.searchToolbar);
+    if (makeSuite === undefined && dev) {
+      console.warn(
+        `[display] search entry hidden: capability "${CAPABILITY_KEYS.searchToolbar}" not registered`,
+      );
+    }
+    // Tuple API: const [Button, Card] = makeSuite({ query, onChange })
+    const [SearchButton, SearchCard] = useMemo(
+      () =>
+        makeSuite
+          ? makeSuite({ query, onChange: setQuery })
+          : [undefined, undefined],
+      [makeSuite, query],
+    );
+    const visible = useMemo(() => queryRecords(records, query), [records, query]);
 
     return (
       <View style={styles.root}>
+        {SearchCard ? <SearchCard /> : null}
         {records.length === 0 ? (
           <EmptyState openEditor={openEditor} />
         ) : (
           <>
-            <View style={styles.header}>
+            <View style={styles.headerColumn}>
+              <View style={styles.header}>
+                {SearchButton ? (
+                  <SearchButton />
+                ) : (
+                  <View style={styles.headerSpacer} />
+                )}
+                <View style={styles.headerActions}>
+                  {openTmdbConfig ? (
+                    <Pressable
+                      style={styles.gearButton}
+                      onPress={() => openTmdbConfig()}
+                      accessibilityLabel="TMDB 设置"
+                    >
+                      <KeyRound size={13} color={colors.textMuted} />
+                    </Pressable>
+                  ) : null}
+                  {openEditor ? (
+                    <Pressable
+                      style={styles.addButton}
+                      onPress={() => openEditor()}
+                      accessibilityLabel="记录观影"
+                    >
+                      <Plus size={14} color="#FFFFFF" />
+                    <Text style={styles.addButtonText}>记录</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
               {timeline ? (
                 <View style={styles.segment}>
                   {(
@@ -68,34 +125,24 @@ export function createRecordsTab(
                     </Pressable>
                   ))}
                 </View>
-              ) : (
-                <View style={styles.headerSpacer} />
-              )}
-              <View style={styles.headerActions}>
-                {openTmdbConfig ? (
-                  <Pressable
-                    style={styles.gearButton}
-                    onPress={() => openTmdbConfig()}
-                    accessibilityLabel="TMDB 设置"
-                  >
-                    <Text style={styles.gearText}>TMDB</Text>
-                  </Pressable>
-                ) : null}
-                {openEditor ? (
-                  <Pressable
-                    style={styles.addButton}
-                    onPress={() => openEditor()}
-                    accessibilityLabel="记录观影"
-                  >
-                    <Text style={styles.addButtonText}>＋ 记录</Text>
-                  </Pressable>
-                ) : null}
-              </View>
+              ) : null}
             </View>
-            {view === "poster" ? (
-              <PosterWall records={records} capabilities={capabilities} />
-            ) : timeline ? (
+            {visible.length === 0 ? (
+              <View style={styles.emptyResults}>
+                <Text style={styles.emptyResultsText}>无匹配记录</Text>
+                <Pressable
+                  style={styles.clearBtn}
+                  onPress={() => setQuery({})}
+                >
+                  <Text style={styles.clearBtnText}>清除筛选</Text>
+                </Pressable>
+              </View>
+            ) : view === "poster" ? (
+              <PosterWall records={visible} capabilities={capabilities} />
+            ) : timeline && activeFilterCount(query) === 0 ? (
               <TimelineSlot Component={timeline} />
+            ) : timeline && activeFilterCount(query) > 0 ? (
+              <PosterWall records={visible} capabilities={capabilities} />
             ) : null}
           </>
         )}
@@ -124,11 +171,11 @@ function EmptyState({ openEditor }: { openEditor: RecordEditCommand | undefined 
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  headerColumn: { gap: spacing.xs, paddingTop: spacing.sm },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
   },
   headerSpacer: { flex: 1 },
   segment: {
@@ -139,6 +186,8 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: "row", gap: spacing.sm },
   gearButton: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
@@ -146,8 +195,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  gearText: { color: colors.textMuted, fontSize: 13 },
   addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
@@ -166,6 +217,15 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xxl, gap: spacing.md },
   emptyTitle: { fontSize: 20, fontWeight: fontWeight.bold as never, color: colors.text },
   emptyBody: { fontSize: 14, color: colors.textMuted, textAlign: "center" },
+  emptyResults: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md },
+  emptyResultsText: { fontSize: 16, color: colors.textMuted },
+  clearBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  clearBtnText: { color: colors.text, fontSize: 14 },
   cta: {
     marginTop: spacing.md,
     paddingVertical: spacing.md,

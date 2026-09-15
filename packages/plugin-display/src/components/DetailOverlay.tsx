@@ -21,6 +21,7 @@ import type { Projection } from "@auktake/ui-contracts";
 import {
   CAPABILITY_KEYS,
   colors,
+  type TagListCommand,
   fontWeight,
   radius,
   spacing,
@@ -95,6 +96,7 @@ export function createDetailOverlay(
     const runBackfill = capabilities.get<(recordId: string) => Promise<unknown>>(
       CAPABILITY_KEYS.tmdbBackfill,
     );
+    const tagList = capabilities.get<TagListCommand>(CAPABILITY_KEYS.tagList);
 
     return (
       <Modal
@@ -156,6 +158,18 @@ export function createDetailOverlay(
                 <Pressable style={styles.closeButton} onPress={() => store.close()}>
                   <Text style={styles.closeText}>关闭</Text>
                 </Pressable>
+                {record.user.tags.length > 0 && tagList ? (
+                  <View style={styles.tagRow}>
+                    {record.user.tags
+                      .map((id) => tagList().find((t) => t.id === id))
+                      .filter((t): t is NonNullable<typeof t> => t !== undefined)
+                      .map((tag) => (
+                        <View key={tag.id} style={styles.tagChip}>
+                          <Text style={styles.tagChipText}>{tag.name}</Text>
+                        </View>
+                      ))}
+                  </View>
+                ) : null}
                 {record.tmdb.id === 0 && runBackfill ? (
                   <Pressable
                     style={[styles.actionButton, styles.backfillButton]}
@@ -238,5 +252,13 @@ const styles = StyleSheet.create({
   deleteButton: { backgroundColor: colors.danger },
   backfillButton: { backgroundColor: "#3F6E5A" },
   metaBox: { gap: spacing.md },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  tagChip: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  tagChipText: { fontSize: 12, color: colors.text },
   actionText: { color: "#FFFFFF", fontWeight: fontWeight.semibold as never },
 });

@@ -20,6 +20,8 @@ export interface EditorDraft {
   /** "" or a number in text form, 0.5 steps, 0–10. 0/"" = unrated. */
   readonly rating: string;
   readonly review: string;
+  /** Phase 3: selected tag ids (validated against existing tags at save). */
+  readonly tagIds: readonly string[];
 }
 
 /** Per-field error messages; empty object = valid. */
@@ -35,6 +37,7 @@ export interface ValidatedDraft {
   readonly watchedAt: string;
   readonly rating: number;
   readonly review: string;
+  readonly tagIds: readonly string[];
 }
 
 export function emptyDraft(defaultWatchedAt: string): EditorDraft {
@@ -47,6 +50,7 @@ export function emptyDraft(defaultWatchedAt: string): EditorDraft {
     watchedAt: defaultWatchedAt,
     rating: "",
     review: "",
+    tagIds: [],
   };
 }
 
@@ -60,6 +64,7 @@ export function draftFromRecord(record: MovieRecord): EditorDraft {
     watchedAt: record.user.watchedAt,
     rating: record.user.rating === 0 ? "" : String(record.user.rating),
     review: record.user.review,
+    tagIds: [...record.user.tags],
   };
 }
 
@@ -119,6 +124,7 @@ export function validateDraft(draft: EditorDraft): FieldErrors {
 export function parseDraft(draft: EditorDraft): ValidatedDraft {
   const rating = draft.rating.trim().length === 0 ? 0 : Number(draft.rating.trim());
   const base: ValidatedDraft = {
+    tagIds: draft.tagIds,
     title: draft.title.trim(),
     originalTitle: draft.originalTitle.trim().length === 0
       ? draft.title.trim()

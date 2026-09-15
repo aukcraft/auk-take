@@ -75,6 +75,10 @@ export function createEditPlugin(deps: PluginRuntimeDeps): AukPlugin {
 
       deps.capabilities.register(CAPABILITY_KEYS.recordEdit, openEdit);
       deps.capabilities.register(CAPABILITY_KEYS.recordDelete, requestDelete);
+      // Phase 3 internal channel: tag reference cleanup (tag delete).
+      deps.capabilities.register(CAPABILITY_KEYS.recordRemoveTag, (tagId: string) =>
+        writer.removeTagFromAll(tagId),
+      );
       // Phase 2 internal channel: snapshot-only merge for the backfill flow.
       deps.capabilities.register(CAPABILITY_KEYS.recordApplyTmdb, (recordId: string, snapshot: import("@auktake/core").TmdbSnapshot) =>
         writer.applyTmdb(recordId, snapshot).then((r) => {
@@ -101,6 +105,7 @@ export function createEditPlugin(deps: PluginRuntimeDeps): AukPlugin {
           deps.capabilities.unregister(CAPABILITY_KEYS.recordEdit);
           deps.capabilities.unregister(CAPABILITY_KEYS.recordDelete);
           deps.capabilities.unregister(CAPABILITY_KEYS.recordApplyTmdb);
+          deps.capabilities.unregister(CAPABILITY_KEYS.recordRemoveTag);
           deps.capabilities.unregister(CAPABILITY_KEYS.overlayRoot);
         },
       };
