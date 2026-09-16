@@ -29,7 +29,7 @@ plugin-jellyfin SHALL 提供纯 TS 客户端口（fetch 经 `svc:http`，可 stu
 ### Requirement: 增量同步与去重
 `cmd:jellyfin-sync` SHALL 手动拉取观看历史并**增量导入**：身份 = `source.jellyfin.itemId + playedAt`（schema Phase 0 预留字段），已在本地存在同身份的记录跳过；新条目经 `cmd:record-apply-jellyfin`（edit 内部通道，唯一写入方）批量写入，`source={type:'jellyfin', jellyfin:{itemId, playedAt, playCount}}`。同步结果 SHALL 汇总反馈（新增 N 条 / 无新条目 / 失败明细）。已导入记录不回写、不覆盖本地编辑。
 
-同步 SHALL 采用**分批渐进**策略（大库容错）：按 `DatePlayed` 升序（从远到近）逐页拉取；新条目攒满批次阈值（默认 1000 条）即提交落盘一批并短暂停顿（默认 150ms）；**每页拉取后**发布 `jellyfin:sync-progress` 事件（`{page, fetched, imported}`，页码逐页递增，纯翻页无新增时同样发布，UI 进度逐步可见）；同步游标（skip 偏移，绑定 baseUrl）SHALL 持久化于 syncMeta 并按页推进。中途失败 SHALL 保留已提交批次与游标，重试从断点续传；游标到达列表尾部后，后续同步仅从尾部拉取新增。
+同步 SHALL 采用**分批渐进**策略（大库容错）：按 `DatePlayed` 升序（从远到近）逐页拉取；新条目攒满批次阈值（默认 1000 条）即提交落盘一批；**每页之间停顿（默认 300ms）以规避限速断连**；**每页拉取后**发布 `jellyfin:sync-progress` 事件（`{page, fetched, imported}`，页码逐页递增，纯翻页无新增时同样发布，UI 进度逐步可见）；同步游标（skip 偏移，绑定 baseUrl）SHALL 持久化于 syncMeta 并按页推进。中途失败 SHALL 保留已提交批次与游标，重试从断点续传；游标到达列表尾部后，后续同步仅从尾部拉取新增。
 
 #### Scenario: 首次导入
 - **WHEN** 服务器有 10 条观看历史且本地无 jellyfin 记录

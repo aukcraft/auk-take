@@ -46,7 +46,7 @@ Phase 1–3 交付了手动录入、TMDB 元数据、标签/搜索/统计的完�
 1. 读配置（解密）→ 未配置 `{status:'error', message:'未配置'}`
 2. `currentUser()` 确认用户
 3. 读本地 records（storage:read 投影快照），构造身份集合；从 syncMeta 读**同步游标**（`{id:'jellyfin-sync-cursor', baseUrl, skip}`，baseUrl 不一致即归 0——换服务器自动重扫）
-4. 升序（`SortBy=DatePlayed&SortOrder=Ascending`）从 `skip=cursor` 逐页拉取（Take=500）：每页映射去重（无 playedAt 跳过）累积新条目；**攒满 batchSize（默认 1000 条新记录）即经 `applyJellyfin` 提交一批**、停顿 `interBatchDelayMs`（默认 150ms）；**每页拉取后发布 `jellyfin:sync-progress` 事件（`{page, fetched, imported}`，页码为本次运行内序号）**，UI 逐页可见进度；每页结束即持久化游标（skip 按原始抓取数推进，含被跳过的条目）
+4. 升序（`SortBy=DatePlayed&SortOrder=Ascending`）从 `skip=cursor` 逐页拉取（Take=500）：每页映射去重（无 playedAt 跳过）累积新条目；**攒满 batchSize（默认 1000 条新记录）即经 `applyJellyfin` 提交一批**；**每页之间停顿 `interPageDelayMs`（默认 300ms）**——限速服务器/反代会掐断突发请求流，页级节流是冒烟实测后的关键修订；**每页拉取后发布 `jellyfin:sync-progress` 事件（`{page, fetched, imported}`，页码为本次运行内序号）**，UI 逐页可见进度；每页结束即持久化游标（skip 按原始抓取数推进，含被跳过的条目）
 5. 短页（<Take）收尾：提交残余批次，游标停在尾部——新增观看记录在升序列表尾部追加，下次同步从游标续拉即增量
 6. 返回 `{status:'imported', count}` / `{status:'noop'}` / `{status:'error', message}`；**中途失败保留已提交批次与游标，重试从断点续传**（身份去重幂等）
 

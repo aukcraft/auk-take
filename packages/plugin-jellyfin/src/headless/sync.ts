@@ -36,8 +36,8 @@ export interface SyncDeps {
   readonly onProgress?: (progress: JellyfinSyncProgress) => void;
   /** New records committed per batch (default 1000). */
   readonly batchSize?: number;
-  /** Pause between batches in ms (default 150; 0 disables). */
-  readonly interBatchDelayMs?: number;
+  /** Pause between pages in ms (default 300; 0 disables). */
+  readonly interPageDelayMs?: number;
   /** Injectable timer for tests. */
   readonly sleep?: (ms: number) => Promise<void>;
 }
@@ -60,7 +60,7 @@ export async function syncJellyfin(
     if (!user) return { status: "error", message: "服务器无可见用户" };
 
     const batchSize = deps.batchSize ?? 1000;
-    const delayMs = deps.interBatchDelayMs ?? 150;
+    const delayMs = deps.interPageDelayMs ?? 300;
     const sleep = deps.sleep ?? defaultSleep;
 
     const existing = await deps.storage.loadAll<MovieRecord>(COLLECTIONS.records);
@@ -79,7 +79,6 @@ export async function syncJellyfin(
       await deps.apply(pending);
       imported += pending.length;
       pending = [];
-      await sleep(delayMs);
     };
 
     for (;;) {
@@ -109,6 +108,10 @@ export async function syncJellyfin(
       const pageNo = Math.ceil((skip - startSkip) / PAGE_SIZE);
       deps.onProgress?.({ page: pageNo, fetched, imported });
       if (page.length < PAGE_SIZE) break;
+      // Pace EVERY page (not just batch commits): rate-limited servers
+      // and proxies drop burst walks — this is what killed the original
+      // all-at-once loop on large libraries.
+      await sleep(delayMs);
     }
     await flush();
     deps.onProgress?.({ page: Math.ceil((skip - startSkip) / PAGE_SIZE), fetched, imported });
