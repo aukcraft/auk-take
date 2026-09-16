@@ -13,6 +13,8 @@ Phase 2 起，编辑弹层 SHALL 在标题输入区提供 TMDB 搜索绑定入�
 
 Phase 3 起，编辑弹层 SHALL 提供标签选择区（经 `ui:tag-picker` 组件能力，未注册时整块隐藏）：多选 chips + 新建入口，选中集实时进入草稿 `user.tags`，保存随记录持久化并照常发布 `record:*` 事件；标签重命名/删除引发的引用清洗 SHALL 经 edit 暴露的批量记录更新内部通道执行（edit 仍为唯一写入方，通道经 ui-contracts key 约定）。
 
+Phase 4 起，edit SHALL 暴露 `cmd:record-apply-jellyfin` 批量导入内部通道：`(records: MovieRecord[]) => Promise<number>`——jellyfin 同步产出的完整记录（含 source/user 快照）经此一次性写入并逐条发布 `record:created`；该通道**仅接受带 `source.type='jellyfin'` 的记录**（防御性校验），保持 edit 为 records 唯一写入方。
+
 #### Scenario: 新建命令
 - **WHEN** 任一插件调用 `cmd:record-edit()`（无参数）
 - **THEN** 编辑弹层以空白表单（默认观看日=当天）打开
@@ -48,6 +50,14 @@ Phase 3 起，编辑弹层 SHALL 提供标签选择区（经 `ui:tag-picker` 组
 #### Scenario: 标签引用清洗通道
 - **WHEN** tag 插件请求删除标签的引用清洗
 - **THEN** edit 内部通道批量移除记录中的该标签 id，每条变更发布 `record:updated`
+
+#### Scenario: jellyfin 批量导入
+- **WHEN** jellyfin 同步产出 5 条新记录并调用 `cmd:record-apply-jellyfin`
+- **THEN** 5 条全部落盘、逐条发布 `record:created`，返回写入数 5
+
+#### Scenario: 导入通道防御
+- **WHEN** 通道收到 `source.type` 非 'jellyfin' 的记录
+- **THEN** 该记录被拒绝写入并报错，其余合法记录不受影响
 
 ### Requirement: 手动录入与快照默认值
 Phase 1 编辑器 SHALL 仅支持手动录入元数据，不发起任何网络请求。手动创建的记录 MUST 满足：`tmdb.id = 0`（哨兵：无 TMDB 绑定）、`tmdb.title` 必填、`posterPath`/`backdropPath`/`overview`/`releaseDate` 为空串、`genres = []`、`runtime = 0`、`originalTitle` 默认等于 title、`source = { type: 'manual' }`、`id` 为 ULID、`schemaVersion = 1`、`mediaCache = {}`。该默认值约定 SHALL 作为 Phase 2 TMDB 补全作业的识别依据。
