@@ -12,7 +12,7 @@ import {
   type SharePosterCommand,
   type ShareResult,
 } from "@auktake/ui-contracts";
-import { renderShareCard } from "./share-card";
+import { renderShareCard, shareCardModel } from "./share-card";
 import { shareSummary, type ShareExportPort } from "./export-port";
 
 /** Structural subset of the fs service (defined in plugin-tmdb). */
@@ -68,9 +68,11 @@ export function createSharePosterCommand(deps: ShareCommandDeps): SharePosterCom
       posterDataUrl = undefined;
     }
 
+    const model = shareCardModel(record, posterDataUrl);
     const svg = renderShareCard(record, posterDataUrl);
     return deps.exportPort.export({
       svg,
+      model,
       summary: shareSummary(record),
       fileName: `auktake-${record.tmdb.title.replace(/[\\/:*?"<>|]/g, "_")}.png`,
     });

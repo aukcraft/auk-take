@@ -12,11 +12,11 @@ plugin-share SHALL 实现 `AukPlugin` 契约（id `share`，tier `recommended`�
 - **THEN** SVG 使用与海报墙一致的确定性色卡占位，流程不中断
 
 ### Requirement: 双端导出端口
-plugin-share SHALL 注册 `cmd:share-poster`（`(recordId: string) => Promise<ShareResult>`），导出经平台端口：**桌面**将 SVG 栅格化为 PNG 并触发下载（canvas/Blob，无新依赖）；**移动**将 SVG 写入缓存目录后经系统分享（RN 内置 Share），目标应用不支持 SVG 时回退纯文本摘要（标题+评分+日期）。`ShareResult` SHALL 区分 `{status:"shared"|"downloaded"|"cancelled"|"error"}`。详情页「分享」按钮在该命令未注册时隐藏。
+plugin-share SHALL 注册 `cmd:share-poster`（`(recordId: string) => Promise<ShareResult>`），导出经平台端口：**桌面**以结构化卡片模型在 canvas 直接绘制为 PNG（SVG 经 `<img>` 栅格化在 WebKit 下污染 canvas），经 fs 端口写入导出目录并在详情页展示写入路径（Tauri webview 无下载管理器，`<a download>` 无效）；**移动**经 RN 内置 Share 分享纯文本摘要（标题+评分+日期+摘录；mobile 无 fs 端口，文件分享记账 Phase 7）。`ShareResult` SHALL 区分 `{status:"shared"|"downloaded"|"cancelled"|"error"}`，downloaded 可携带写入路径；错误与取消 SHALL 在详情页给出可见反馈。详情页「分享」按钮在该命令未注册时隐藏。
 
 #### Scenario: 桌面导出 PNG
 - **WHEN** 桌面端对某记录执行分享
-- **THEN** 生成 PNG 并触发浏览器/Tauri 下载，结果 downloaded
+- **THEN** canvas 直绘生成 PNG，经 fs 端口写入导出目录，结果 downloaded 且携带路径，详情页显示路径
 
 #### Scenario: 移动系统分享
 - **WHEN** 移动端执行分享且系统分享面板被接受

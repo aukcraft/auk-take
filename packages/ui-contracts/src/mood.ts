@@ -30,6 +30,6 @@ export type SharePosterCommand = (recordId: string) => Promise<ShareResult>;
 
 export type ShareResult =
   | { readonly status: "shared" }
-  | { readonly status: "downloaded" }
+  | { readonly status: "downloaded"; readonly path?: string }
   | { readonly status: "cancelled" }
   | { readonly status: "error"; readonly message: string };

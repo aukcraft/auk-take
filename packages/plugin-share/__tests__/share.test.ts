@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { COLLECTIONS, InMemoryStorage, type MovieRecord } from "@auktake/core";
 import type { ShareResult } from "@auktake/ui-contracts";
 import { renderShareCard, SHARE_CARD } from "../src/headless/share-card";
-import { shareSummary, createNativeShareExport } from "../src/headless/export-port";
+import { createDesktopShareExport, shareSummary, createNativeShareExport } from "../src/headless/export-port";
 import { bytesToBase64, createSharePosterCommand } from "../src/headless/share-command";
 
 function makeRecord(overrides?: {
@@ -148,9 +148,9 @@ describe("createNativeShareExport", () => {
 
   it("maps shared/dismissed/rejected to shared/cancelled/cancelled", async () => {
     const port = createNativeShareExport(module("sharedAction"));
-    expect(await port.export({ svg: "", summary: "s", fileName: "f" })).toEqual({ status: "shared" });
+    expect(await port.export({ svg: "", model: {} as never, summary: "s", fileName: "f" })).toEqual({ status: "shared" });
     const dismissed = createNativeShareExport(module("dismissedAction"));
-    expect(await dismissed.export({ svg: "", summary: "s", fileName: "f" })).toEqual({ status: "cancelled" });
+    expect(await dismissed.export({ svg: "", model: {} as never, summary: "s", fileName: "f" })).toEqual({ status: "cancelled" });
     const throwing = createNativeShareExport({
       sharedAction: "sharedAction",
       dismissedAction: "dismissedAction",
@@ -158,7 +158,7 @@ describe("createNativeShareExport", () => {
         throw new Error("user bailed");
       },
     });
-    expect(await throwing.export({ svg: "", summary: "s", fileName: "f" })).toEqual({ status: "cancelled" });
+    expect(await throwing.export({ svg: "", model: {} as never, summary: "s", fileName: "f" })).toEqual({ status: "cancelled" });
   });
 
   it("poster bytes flow into a dataURL when cache + fs are present", async () => {
@@ -181,5 +181,84 @@ describe("createNativeShareExport", () => {
     });
     await command("rec-1");
     expect(seen[0]).toContain(`href="data:image/jpeg;base64,${Buffer.from([1, 2, 3]).toString("base64")}"`);
+  });
+});
+
+
+describe("createDesktopShareExport", () => {
+  const stubCanvas = () => {
+    const calls: string[] = [];
+    return {
+      calls,
+      canvas: {
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          fillStyle: "",
+          font: "",
+          textAlign: "",
+          fillRect: () => calls.push("fillRect"),
+          fillText: () => calls.push("fillText"),
+          drawImage: () => calls.push("drawImage"),
+        }),
+        toDataURL: () => "data:image/png;base64,QUJD", // "ABC"
+      },
+    };
+  };
+  const model = {
+    title: "情书", badge: "", ratingText: "★8.5", watchedAt: "2026-01-01",
+    excerpt: "", palette: { bg: "#111", fg: "#eee" }, footer: "AukTake 观影记录",
+  };
+
+  it("writes PNG bytes via fs and returns the path", async () => {
+    const { canvas, calls } = stubCanvas();
+    const written: { path: string; bytes: Uint8Array }[] = [];
+    const fs = {
+      mkdir: async () => undefined,
+      writeFile: async (path: string, data: Uint8Array) => {
+        written.push({ path, bytes: data });
+      },
+    };
+    const port = createDesktopShareExport({ fs, dir: "share-exports", createCanvas: () => canvas });
+    const result = await port.export({ svg: "<svg/>", model, summary: "s", fileName: "auktake-情书.png" });
+    expect(result).toEqual({ status: "downloaded", path: "share-exports/auktake-情书.png" });
+    expect(written[0]?.path).toBe("share-exports/auktake-情书.png");
+    expect(Array.from(written[0]!.bytes)).toEqual([0x41, 0x42, 0x43]); // "ABC"
+    expect(calls).toContain("fillText");
+  });
+
+  it("canvas failure returns an error result (never throws)", async () => {
+    const fs = { mkdir: async () => undefined, writeFile: async () => undefined };
+    const badCanvas = {
+      width: 0, height: 0,
+      getContext: () => null,
+      toDataURL: () => "",
+    };
+    const port = createDesktopShareExport({ fs, dir: "d", createCanvas: () => badCanvas });
+    const result = await port.export({ svg: "", model, summary: "", fileName: "x.png" });
+    expect(result.status).toBe("error");
+  });
+
+  it("poster image decodes and is drawn when the model carries one", async () => {
+    const { canvas, calls } = stubCanvas();
+    const img = {
+      onload: null as null | (() => void),
+      onerror: null as null | (() => void),
+      naturalWidth: 300, naturalHeight: 450,
+      set src(_v: string) { setTimeout(() => this.onload?.(), 0); },
+      get src() { return ""; },
+    };
+    const fs = { mkdir: async () => undefined, writeFile: async () => undefined };
+    const port = createDesktopShareExport({
+      fs, dir: "d",
+      createCanvas: () => canvas,
+      createImage: () => img,
+    });
+    const result = await port.export({
+      svg: "", model: { ...model, posterDataUrl: "data:image/jpeg;base64,QUJD" },
+      summary: "", fileName: "x.png",
+    });
+    expect(result.status).toBe("downloaded");
+    expect(calls).toContain("drawImage");
   });
 });

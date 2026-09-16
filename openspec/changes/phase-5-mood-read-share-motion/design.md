@@ -26,7 +26,7 @@ mood 插件注册 `ui:tab:read` 内容组件：两条流——**心情时间线*
 
 ### D3. 分享海报：SVG 标记 + 平台导出端口
 headless 纯函数 `renderShareCard(record, imageDataUrl?) => string` 产出 SVG 标记字符串（固定模板 1080×1350：海报图/色卡 + 标题 + 评分 + 观看日期 + 观后感摘录 + SxxExx badge），纯 Node 可断言。导出经平台端口：
-- **桌面**：SVG 注入 `<img>` → canvas rasterize → PNG Blob → 下载（无新依赖）
+- **桌面**：canvas **直接按结构化模型绘制**（SVG 经 `<img>` 内嵌 data: 图会污染 canvas，WebKit 下 toDataURL 抛错）→ `toDataURL` 解码字节 → **fs 端口写盘**到 `share-exports/`（Tauri webview 无浏览器下载管理器，`<a download>` 静默无效），返回写入路径并在详情页展示
 - **移动**：SVG 写缓存文件（platform-rn 二进制 fs 端口既有）→ RN 内置 `Share.share({url})` 系统分享（SVG 文件；不支持 SVG 的目标应用退回纯文本摘要——v1 接受）
 海报素材：poster 优先取 image-cache 本地路径转 dataURL（避免 CSP/文件协议问题），未命中用色卡占位——分享海报 MUST NOT 因图片下载失败而失败。backdrop/stills 入缓存档位（D4）为后续模板留素材，v1 模板仅用 poster。
 

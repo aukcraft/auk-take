@@ -108,6 +108,8 @@ export function createDetailOverlay(
     const moodAdd = capabilities.get<MoodAddCommand>(CAPABILITY_KEYS.moodAdd);
     const sharePoster = capabilities.get<SharePosterCommand>(CAPABILITY_KEYS.sharePoster);
     const [sharing, setSharing] = useState(false);
+    const [shareMessage, setShareMessage] = useState<string | null>(null);
+    useEffect(() => setShareMessage(null), [id]);
 
     // Phase 5: backdrop fade + card rise (Modal animationType="none" so
     // both layers animate independently; reduced motion -> instant).
@@ -239,14 +241,29 @@ export function createDetailOverlay(
                     disabled={sharing}
                     onPress={() => {
                       setSharing(true);
+                      setShareMessage(null);
                       void sharePoster(record.id)
-                        .catch(() => undefined)
+                        .then((r) =>
+                          setShareMessage(
+                            r.status === "downloaded"
+                              ? `已导出 PNG：${r.path ?? ""}`
+                              : r.status === "shared"
+                                ? "已分享到系统面板"
+                                : r.status === "cancelled"
+                                  ? "已取消"
+                                  : `导出失败：${r.message}`,
+                          ),
+                        )
+                        .catch((e: unknown) =>
+                          setShareMessage(`导出失败：${e instanceof Error ? e.message : String(e)}`),
+                        )
                         .finally(() => setSharing(false));
                     }}
                   >
                     <Text style={styles.actionText}>{sharing ? "分享中…" : "分享"}</Text>
                   </Pressable>
                 ) : null}
+                {shareMessage ? <Text style={styles.shareMessage}>{shareMessage}</Text> : null}
                 {openEditor ? (
                   <Pressable
                     style={styles.actionButton}
@@ -328,4 +345,5 @@ const styles = StyleSheet.create({
   },
   tagChipText: { fontSize: 12, color: colors.text },
   actionText: { color: "#FFFFFF", fontWeight: fontWeight.semibold as never },
+  shareMessage: { color: colors.textMuted, fontSize: 12, marginTop: spacing.xs },
 });

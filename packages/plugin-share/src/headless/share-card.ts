@@ -37,6 +37,36 @@ function excerpt(text: string): string {
 }
 
 /**
+ * Structured card content — the single source for BOTH renderers
+ * (headless SVG string and the desktop canvas port, which draws the
+ * same layout without routing the SVG through <img>).
+ */
+export interface ShareCardModel {
+  readonly title: string;
+  readonly badge: string;
+  readonly ratingText: string;
+  readonly watchedAt: string;
+  readonly excerpt: string;
+  readonly posterDataUrl?: string;
+  readonly palette: { readonly bg: string; readonly fg: string };
+  readonly footer: string;
+}
+
+export function shareCardModel(record: MovieRecord, posterDataUrl?: string): ShareCardModel {
+  const slot = POSTER_PALETTE[colorHash(record.tmdb.title)]!;
+  return {
+    title: record.tmdb.title,
+    badge: episodeBadge(record),
+    ratingText: ratingText(record.user.rating),
+    watchedAt: record.user.watchedAt,
+    excerpt: excerpt(record.user.review),
+    ...(posterDataUrl ? { posterDataUrl } : {}),
+    palette: { bg: slot.bg, fg: slot.fg },
+    footer: "AukTake 观影记录",
+  };
+}
+
+/**
  * Render the share card SVG. `posterDataUrl` is a base64 data URL of
  * the cached poster (local file -> data URL conversion happens in the
  * export port); when absent the deterministic palette placeholder is
@@ -45,19 +75,17 @@ function excerpt(text: string): string {
  */
 export function renderShareCard(record: MovieRecord, posterDataUrl?: string): string {
   const { width: W, height: H } = SHARE_CARD;
-  const slot = POSTER_PALETTE[colorHash(record.tmdb.title)]!;
-  const badge = episodeBadge(record);
-  const title = escapeXml(record.tmdb.title + (badge ? ` ${badge}` : ""));
+  const m = shareCardModel(record, posterDataUrl);
   const posterH = 810;
 
-  const posterLayer = posterDataUrl
-    ? `<image href="${posterDataUrl}" x="0" y="0" width="${W}" height="${posterH}" preserveAspectRatio="xMidYMid slice"/>`
-    : `<rect x="0" y="0" width="${W}" height="${posterH}" fill="${slot.bg}"/>` +
-      `<text x="${W / 2}" y="${posterH / 2}" text-anchor="middle" font-size="72" font-weight="600" fill="${slot.fg}" font-family="sans-serif">${escapeXml(record.tmdb.title.slice(0, 12))}</text>`;
+  const posterLayer = m.posterDataUrl
+    ? `<image href="${m.posterDataUrl}" x="0" y="0" width="${W}" height="${posterH}" preserveAspectRatio="xMidYMid slice"/>`
+    : `<rect x="0" y="0" width="${W}" height="${posterH}" fill="${m.palette.bg}"/>` +
+      `<text x="${W / 2}" y="${posterH / 2}" text-anchor="middle" font-size="72" font-weight="600" fill="${m.palette.fg}" font-family="sans-serif">${escapeXml(m.title.slice(0, 12))}</text>`;
 
-  const review = excerpt(record.user.review);
-  const reviewLayer = review
-    ? `<text x="72" y="${posterH + 250}" font-size="30" fill="#9A9AA6" font-family="sans-serif">${escapeXml(review)}</text>`
+  const title = escapeXml(m.title + (m.badge ? ` ${m.badge}` : ""));
+  const reviewLayer = m.excerpt
+    ? `<text x="72" y="${posterH + 250}" font-size="30" fill="#9A9AA6" font-family="sans-serif">${escapeXml(m.excerpt)}</text>`
     : "";
 
   return (
@@ -65,9 +93,9 @@ export function renderShareCard(record: MovieRecord, posterDataUrl?: string): st
     `<rect width="${W}" height="${H}" fill="#101014"/>` +
     posterLayer +
     `<text x="72" y="${posterH + 90}" font-size="52" font-weight="700" fill="#EDEDF2" font-family="sans-serif">${title}</text>` +
-    `<text x="72" y="${posterH + 160}" font-size="34" fill="#7C6CF0" font-family="sans-serif">${escapeXml(ratingText(record.user.rating))} · ${escapeXml(record.user.watchedAt)}</text>` +
+    `<text x="72" y="${posterH + 160}" font-size="34" fill="#7C6CF0" font-family="sans-serif">${escapeXml(m.ratingText)} · ${escapeXml(m.watchedAt)}</text>` +
     reviewLayer +
-    `<text x="72" y="${H - 56}" font-size="26" fill="#9A9AA6" font-family="sans-serif">AukTake 观影记录</text>` +
+    `<text x="72" y="${H - 56}" font-size="26" fill="#9A9AA6" font-family="sans-serif">${escapeXml(m.footer)}</text>` +
     `</svg>`
   );
 }
