@@ -167,6 +167,15 @@ describe("JellyfinConfigStore", () => {
     expect(await store.loadCursor("http://jf")).toBe(1500);
     expect(await store.loadCursor("http://other-server")).toBe(0);
   });
+
+  it("drops schemaVersion-1 cursors (Skip/Take-era, untrustworthy) once", async () => {
+    const storage = new InMemoryStorage();
+    await storage.persistAll(COLLECTIONS.syncMeta, [
+      { id: "jellyfin-sync-cursor", schemaVersion: 1, baseUrl: "http://jf", skip: 16500 },
+    ]);
+    const store = new JellyfinConfigStore(storage, new EventBus());
+    expect(await store.loadCursor("http://jf")).toBe(0);
+  });
 });
 
 describe("syncJellyfin", () => {
@@ -356,14 +365,15 @@ describe("syncJellyfin batched walk", () => {
     expect(skips[0]).toBe("500");
   });
 
-  it("clamps a beyond-end cursor (left by the Skip/Take bug) to the server total", async () => {
+  it("resets a beyond-end cursor (Skip/Take-bug legacy) and rewalks from 0", async () => {
     const { deps, configStore, requests } = await pagedSetup(makeItems(10));
     await configStore.saveCursor("http://jf", 3_050_939); // corrupt legacy cursor
     const result = await syncJellyfin(deps, true);
-    expect(result).toEqual({ status: "noop" }); // empty page at that offset
-    expect(await configStore.loadCursor("http://jf")).toBe(10); // healed to total
-    expect(
-      new URL(requests.find((u) => u.includes("/Items"))!).searchParams.get("StartIndex"),
-    ).toBe("3050939");
+    expect(result).toEqual({ status: "imported", count: 10 }); // rewalks from 0
+    const starts = requests
+      .filter((u) => u.includes("/Items"))
+      .map((u) => new URL(u).searchParams.get("StartIndex"));
+    expect(starts).toEqual(["3050939", "0"]); // probe, then restart from 0
+    expect(await configStore.loadCursor("http://jf")).toBe(10); // lands on tail
   });
 });

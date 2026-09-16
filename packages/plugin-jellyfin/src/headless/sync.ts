@@ -69,7 +69,8 @@ export async function syncJellyfin(
     );
 
     let skip = await deps.cursor.load();
-    const startSkip = skip;
+    let startSkip = skip;
+    let rewalked = false;
     let fetched = 0;
     let imported = 0;
     let pending: MovieRecord[] = [];
@@ -83,6 +84,24 @@ export async function syncJellyfin(
 
     for (;;) {
       const page = await deps.client.playedItemsPage(user.Id, skip, PAGE_SIZE);
+
+      if (
+        page.items.length === 0 &&
+        page.total !== null &&
+        skip > page.total &&
+        !rewalked
+      ) {
+        // Beyond-end cursor (legacy Skip/Take-bug corruption, or server-
+        // side deletions shifting offsets): an offset past the tail cannot
+        // mean "everything before it is imported" — restart from 0 ONCE.
+        // Identity dedup makes the rewalk safe (existing records skip).
+        rewalked = true;
+        skip = 0;
+        startSkip = 0;
+        fetched = 0;
+        continue;
+      }
+
       fetched += page.items.length;
       skip += page.items.length;
 
@@ -95,10 +114,8 @@ export async function syncJellyfin(
       }
 
       // Persist the walk position per page (not just per commit) so a
-      // failure on dupe-heavy stretches still resumes forward. Clamp to
-      // the server total when known — heals cursors left beyond the end
-      // by older buggy runs or by server-side deletions.
-      await deps.cursor.save(page.total !== null ? Math.min(skip, page.total) : skip);
+      // failure on dupe-heavy stretches still resumes forward.
+      await deps.cursor.save(skip);
       if (pending.length >= batchSize) await flush();
       // Per-page progress: the fetched counter ticks visibly even when a
       // page contributes no new records (dupe-heavy resume stretches).

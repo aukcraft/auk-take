@@ -64,13 +64,18 @@ export class JellyfinConfigStore {
     const rows = await this.storage.loadAll<StoredCursor>(COLLECTIONS.syncMeta);
     const stored = rows.find((r) => r.id === CURSOR_ID);
     if (!stored || stored.baseUrl !== baseUrl.replace(/\/+$/, "")) return 0;
+    // schemaVersion 2: v1 cursors were written by the buggy Skip/Take-era
+    // walk (and the clamp-to-total healing) and cannot be trusted to mean
+    // "everything before this offset is imported" — reset to 0 exactly
+    // once; identity dedup makes the rewalk safe.
+    if (stored.schemaVersion !== 2) return 0;
     return stored.skip ?? 0;
   }
 
   async saveCursor(baseUrl: string, skip: number): Promise<void> {
     const rows = await this.storage.loadAll<StoredCursor>(COLLECTIONS.syncMeta);
     const next = rows.filter((r) => r.id !== CURSOR_ID);
-    next.push({ id: CURSOR_ID, schemaVersion: 1, baseUrl: baseUrl.replace(/\/+$/, ""), skip });
+    next.push({ id: CURSOR_ID, schemaVersion: 2, baseUrl: baseUrl.replace(/\/+$/, ""), skip });
     await this.storage.persistAll(COLLECTIONS.syncMeta, next);
   }
 
