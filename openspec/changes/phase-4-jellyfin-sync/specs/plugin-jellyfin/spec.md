@@ -24,7 +24,7 @@ plugin-jellyfin SHALL 提供纯 TS 客户端口（fetch 经 `svc:http`，可 stu
 
 #### Scenario: 分页拉全量
 - **WHEN** 观看历史超过单页上限
-- **THEN** 客户端口按 Skip/Take 循环拉取至无更多条目
+- **THEN** 客户端口按 StartIndex/Limit 循环拉取至短页或达到 TotalRecordCount（服务器忽略分页参数时亦能终止）
 
 ### Requirement: 增量同步与去重
 `cmd:jellyfin-sync` SHALL 手动拉取观看历史并**增量导入**：身份 = `source.jellyfin.itemId + playedAt`（schema Phase 0 预留字段），已在本地存在同身份的记录跳过；新条目经 `cmd:record-apply-jellyfin`（edit 内部通道，唯一写入方）批量写入，`source={type:'jellyfin', jellyfin:{itemId, playedAt, playCount}}`。同步结果 SHALL 汇总反馈（新增 N 条 / 无新条目 / 失败明细）。已导入记录不回写、不覆盖本地编辑。

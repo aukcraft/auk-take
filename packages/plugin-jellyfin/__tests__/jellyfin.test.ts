@@ -50,6 +50,22 @@ describe("JellyfinClient", () => {
     expect(items.length).toBe(503);
     expect(calls).toBe(2);
   });
+
+  it("terminates via TotalRecordCount even when pages are never short (regression: Skip/Take ignored)", async () => {
+    let calls = 0;
+    // Misbehaving server: ALWAYS returns a full page regardless of StartIndex.
+    const http = stubHttp(() => {
+      calls += 1;
+      return {
+        Items: Array.from({ length: 500 }, (_, i) => ({ Id: `i${i}` })),
+        TotalRecordCount: 1000,
+      };
+    });
+    const client = new JellyfinClient({ http, baseUrl: "http://jf", apiKey: "K" });
+    const items = await client.playedItems("u1");
+    expect(items.length).toBe(1000);
+    expect(calls).toBe(2); // stops at startIndex >= total, no endless walk
+  });
 });
 
 const movieItem: JellyfinItem = {
@@ -246,12 +262,12 @@ describe("syncJellyfin batched walk", () => {
       requests.push(url);
       if (url.endsWith("/Users")) return jsonResponse([{ Id: "u1" }]);
       const u = new URL(url);
-      const skip = Number(u.searchParams.get("Skip") ?? 0);
-      const take = Number(u.searchParams.get("Take") ?? 500);
+      const skip = Number(u.searchParams.get("StartIndex") ?? 0);
+      const take = Number(u.searchParams.get("Limit") ?? 500);
       if (failAtSkip !== undefined && skip === failAtSkip) {
         throw new Error("connection reset");
       }
-      return jsonResponse({ Items: all.slice(skip, skip + take) });
+      return jsonResponse({ Items: all.slice(skip, skip + take), TotalRecordCount: all.length });
     });
     return { http: http as unknown as (url: string) => Promise<Response>, requests };
   }
@@ -317,7 +333,7 @@ describe("syncJellyfin batched walk", () => {
     const result = await syncJellyfin(second.deps, true);
     expect(result).toEqual({ status: "imported", count: 2 });
     const firstItemsRequest = second.requests.find((u) => u.includes("/Items"));
-    expect(new URL(firstItemsRequest!).searchParams.get("Skip")).toBe("600");
+    expect(new URL(firstItemsRequest!).searchParams.get("StartIndex")).toBe("600");
   });
 
   it("mid-walk failure keeps committed batches; retry resumes from the cursor", async () => {
@@ -336,7 +352,18 @@ describe("syncJellyfin batched walk", () => {
     expect(result2).toEqual({ status: "imported", count: 700 });
     const skips = retried.requests
       .filter((u) => u.includes("/Items"))
-      .map((u) => new URL(u).searchParams.get("Skip"));
+      .map((u) => new URL(u).searchParams.get("StartIndex"));
     expect(skips[0]).toBe("500");
+  });
+
+  it("clamps a beyond-end cursor (left by the Skip/Take bug) to the server total", async () => {
+    const { deps, configStore, requests } = await pagedSetup(makeItems(10));
+    await configStore.saveCursor("http://jf", 3_050_939); // corrupt legacy cursor
+    const result = await syncJellyfin(deps, true);
+    expect(result).toEqual({ status: "noop" }); // empty page at that offset
+    expect(await configStore.loadCursor("http://jf")).toBe(10); // healed to total
+    expect(
+      new URL(requests.find((u) => u.includes("/Items"))!).searchParams.get("StartIndex"),
+    ).toBe("3050939");
   });
 });

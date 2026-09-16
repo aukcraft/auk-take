@@ -12,7 +12,7 @@
 ## 3. plugin-jellyfin headless
 
 - [x] 3.1 包骨架（core + ui-contracts + ulid；recommended tier）
-- [x] 3.2 `JellyfinClient`：URL/鉴权头纯函数（MediaBrowser Token）、systemInfo/currentUser/playedItems（Skip/Take 分页拉全量）+ stub 单测（头/query/分页循环）
+- [x] 3.2 `JellyfinClient`：URL/鉴权头纯函数（MediaBrowser Token）、systemInfo/currentUser/playedItems（StartIndex/Limit 分页 + TotalRecordCount 终止，冒烟修订）+ stub 单测（头/query/分页循环）
 - [x] 3.3 `mapItemToRecord`：电影/剧集（SeriesName+S/E）/tmdb.id 取 ProviderIds/RTicks→分钟/PremiereDate/LastPlayedDate→watchedAt/playCount + 全矩阵单测；`jellyfinIdentity` 身份键
 - [x] 3.4 `JellyfinConfigStore`：syncMeta 加密存取（Key 密文/URL 明文）+ 单测（round-trip、遗留明文兼容）
 - [x] 3.5 `syncJellyfin` 编排：未配置报错 → 拉取 → 身份去重 → 经注入通道写入 → 结果汇总 + 单测（首次导入 N / 增量 / 无 playedAt 跳过 / 通道缺失报错）

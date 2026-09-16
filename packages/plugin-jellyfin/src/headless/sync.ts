@@ -16,7 +16,7 @@ import type {
   JellyfinSyncResult,
   RecordApplyJellyfinCommand,
 } from "@auktake/ui-contracts";
-import type { JellyfinClient, JellyfinItem } from "./jellyfin-client";
+import type { JellyfinClient } from "./jellyfin-client";
 import { jellyfinIdentity, mapItems } from "./mapping";
 
 export interface SyncCursor {
@@ -82,15 +82,11 @@ export async function syncJellyfin(
     };
 
     for (;;) {
-      const page: readonly JellyfinItem[] = await deps.client.playedItemsPage(
-        user.Id,
-        skip,
-        PAGE_SIZE,
-      );
-      fetched += page.length;
-      skip += page.length;
+      const page = await deps.client.playedItemsPage(user.Id, skip, PAGE_SIZE);
+      fetched += page.items.length;
+      skip += page.items.length;
 
-      for (const record of mapItems(page, deps.generateId, deps.now())) {
+      for (const record of mapItems(page.items, deps.generateId, deps.now())) {
         const identity = jellyfinIdentity(record);
         // identity === null: no playedAt — unmappable, skipped by design.
         if (identity === null || seen.has(identity)) continue;
@@ -99,15 +95,21 @@ export async function syncJellyfin(
       }
 
       // Persist the walk position per page (not just per commit) so a
-      // failure on dupe-heavy stretches still resumes forward.
-      await deps.cursor.save(skip);
+      // failure on dupe-heavy stretches still resumes forward. Clamp to
+      // the server total when known — heals cursors left beyond the end
+      // by older buggy runs or by server-side deletions.
+      await deps.cursor.save(page.total !== null ? Math.min(skip, page.total) : skip);
       if (pending.length >= batchSize) await flush();
       // Per-page progress: the fetched counter ticks visibly even when a
       // page contributes no new records (dupe-heavy resume stretches).
       // `page` counts pages fetched THIS run (resume starts at page 1).
       const pageNo = Math.ceil((skip - startSkip) / PAGE_SIZE);
       deps.onProgress?.({ page: pageNo, fetched, imported });
-      if (page.length < PAGE_SIZE) break;
+      if (page.items.length < PAGE_SIZE) break;
+      // Second termination signal: TotalRecordCount. A server that
+      // ignores/mishandles StartIndex would otherwise loop forever
+      // (this exact bug produced a 3M-offset walk in smoke testing).
+      if (page.total !== null && skip >= page.total) break;
       // Pace EVERY page (not just batch commits): rate-limited servers
       // and proxies drop burst walks — this is what killed the original
       // all-at-once loop on large libraries.

@@ -46,6 +46,13 @@ export interface JellyfinSystemInfo {
 
 const PAGE_SIZE = 500;
 
+/** One page of a played-items walk, plus the server-side total. */
+export interface PlayedItemsPage {
+  readonly items: readonly JellyfinItem[];
+  /** TotalRecordCount from the server; null when omitted. */
+  readonly total: number | null;
+}
+
 export class JellyfinClient {
   private readonly deps: JellyfinClientDeps;
 
@@ -99,28 +106,42 @@ export class JellyfinClient {
     SortOrder: "Ascending",
   };
 
-  /** One page of played Movie/Episode items. */
+  /**
+   * One page of played Movie/Episode items.
+   *
+   * Jellyfin paginates with StartIndex/Limit (NOT Skip/Take — those are
+   * silently IGNORED, which turned our first walk into an endless loop
+   * of full-page responses; see design D2 revision). The response also
+   * carries TotalRecordCount, which we use as a second termination
+   * signal so a server that mishandles paging still stops the walk.
+   */
   async playedItemsPage(
     userId: string,
-    skip: number,
-    take: number = PAGE_SIZE,
-  ): Promise<readonly JellyfinItem[]> {
-    const page = await this.request<{ Items?: readonly JellyfinItem[] }>(
-      `/Users/${userId}/Items`,
-      { ...JellyfinClient.PLAYED_QUERY, Skip: skip, Take: take },
-    );
-    return page.Items ?? [];
+    startIndex: number,
+    limit: number = PAGE_SIZE,
+  ): Promise<PlayedItemsPage> {
+    const page = await this.request<{
+      Items?: readonly JellyfinItem[];
+      TotalRecordCount?: number;
+    }>(`/Users/${userId}/Items`, {
+      ...JellyfinClient.PLAYED_QUERY,
+      StartIndex: startIndex,
+      Limit: limit,
+    });
+    const items = page.Items ?? [];
+    return { items, total: page.TotalRecordCount ?? null };
   }
 
   /** All played Movie/Episode items, paged to completion. */
   async playedItems(userId: string): Promise<readonly JellyfinItem[]> {
     const out: JellyfinItem[] = [];
-    let skip = 0;
+    let startIndex = 0;
     for (;;) {
-      const items = await this.playedItemsPage(userId, skip);
+      const { items, total } = await this.playedItemsPage(userId, startIndex);
       out.push(...items);
+      startIndex += items.length;
       if (items.length < PAGE_SIZE) break;
-      skip += PAGE_SIZE;
+      if (total !== null && startIndex >= total) break;
     }
     return out;
   }
