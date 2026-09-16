@@ -16,6 +16,8 @@
     "@auktake/platform-tauri": "workspace:*",
     "@auktake/plugin-display": "workspace:*",
     "@auktake/plugin-edit": "workspace:*",
+    "@auktake/plugin-jellyfin": "workspace:*",
+    "@auktake/plugin-network": "workspace:*",
     "@auktake/plugin-record": "workspace:*",
     "@auktake/plugin-search": "workspace:*",
     "@auktake/plugin-stats": "workspace:*",

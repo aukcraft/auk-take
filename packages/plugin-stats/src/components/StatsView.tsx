@@ -3,13 +3,20 @@
  * bars (no chart library — design D5), genre/tag distributions, top
  * day. Drill-down via cmd:search (degrades to non-tappable).
  */
-import React, { useMemo, useState, useSyncExternalStore } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { ChevronLeft, ChevronRight, CloudDownload, Settings, Sparkles } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
+import type { CapabilityRegistry, EventBus, MovieRecord } from "@auktake/core";
 import {
   CAPABILITY_KEYS,
+  JELLYFIN_EVENTS,
+  TMDB_EVENTS,
   colors,
+  type JellyfinSyncCommand,
+  type JellyfinSyncProgress,
+  type JellyfinSyncResult,
+  type TmdbBackfillKnownCommand,
+  type TmdbBackfillProgress,
   fontWeight,
   radius,
   spacing,
@@ -34,6 +41,7 @@ export function createStatsView(
   projection: Projection<MovieRecord>,
   capabilities: CapabilityRegistry,
   dev: boolean,
+  events?: EventBus,
 ): React.ComponentType {
   return function StatsView() {
     const records = useSyncExternalStore(
@@ -45,6 +53,67 @@ export function createStatsView(
 
     const tagList = capabilities.get<TagListCommand>(CAPABILITY_KEYS.tagList);
     const search = capabilities.get<SearchCommand>(CAPABILITY_KEYS.search);
+    const jellyfinSync = capabilities.get<JellyfinSyncCommand>(CAPABILITY_KEYS.jellyfinSync);
+    const jellyfinConfigure = capabilities.get<() => void>(CAPABILITY_KEYS.jellyfinConfigure);
+    const backfillKnown = capabilities.get<TmdbBackfillKnownCommand>(
+      CAPABILITY_KEYS.tmdbBackfillKnown,
+    );
+    const [syncing, setSyncing] = useState(false);
+    const [syncMessage, setSyncMessage] = useState<string | null>(null);
+    const [backfilling, setBackfilling] = useState(false);
+    const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
+
+    // Live batch progress while a sync runs (jellyfin plugin emits after
+    // each committed batch; large libraries import gradually).
+    useEffect(() => {
+      if (!events || !syncing) return;
+      return events.on<JellyfinSyncProgress>(JELLYFIN_EVENTS.syncProgress, (p) => {
+        setSyncMessage(`同步中… 第 ${p.page} 页 · 已拉取 ${p.fetched} 条 · 导入 ${p.imported} 条`);
+      });
+    }, [events, syncing]);
+
+    // Live progress while a metadata backfill runs — subscribed ALWAYS,
+    // since the jellyfin plugin fires an auto-backfill after each sync
+    // (not just when this view's button started it).
+    useEffect(() => {
+      if (!events) return;
+      return events.on<TmdbBackfillProgress>(TMDB_EVENTS.backfillProgress, (p) => {
+        setBackfilling(p.done < p.total);
+        setBackfillMessage(`补全元数据… ${p.done}/${p.total} · 已更新 ${p.updated} 条`);
+      });
+    }, [events]);
+
+    const runBackfill = async (): Promise<void> => {
+      if (!backfillKnown || backfilling) return;
+      setBackfilling(true);
+      setBackfillMessage(null);
+      const result = await backfillKnown();
+      setBackfilling(false);
+      setBackfillMessage(
+        result.status === "done"
+          ? result.updated + result.skipped + result.failed === 0
+            ? "元数据已是最新"
+            : `元数据补全完成：更新 ${result.updated} 条${result.skipped ? `，无匹配 ${result.skipped} 条` : ""}${result.failed ? `，失败 ${result.failed} 条` : ""}`
+          : result.status === "already-running"
+            ? "元数据补全进行中…"
+            : `补全失败：${result.message}`,
+      );
+    };
+
+    const runSync = async (): Promise<void> => {
+      if (!jellyfinSync) return;
+      setSyncing(true);
+      setSyncMessage(null);
+      const result: JellyfinSyncResult = await jellyfinSync();
+      setSyncing(false);
+      setSyncMessage(
+        result.status === "imported"
+          ? `已从 Jellyfin 导入 ${result.count} 条记录`
+          : result.status === "noop"
+            ? "没有新的观看记录"
+            : `同步失败：${result.message}`,
+      );
+    };
     if (search === undefined && dev) {
       console.warn(`[stats] drill-down disabled: "${CAPABILITY_KEYS.search}" not registered`);
     }
@@ -165,6 +234,48 @@ export function createStatsView(
             </Text>
           </>
         ) : null}
+
+        <View style={styles.jfRow}>
+          {jellyfinSync ? (
+            <Pressable
+              style={[styles.jfButton, syncing && { opacity: 0.6 }]}
+              disabled={syncing}
+              onPress={() => void runSync()}
+              accessibilityLabel="从 Jellyfin 导入"
+            >
+              <CloudDownload size={15} color="#FFFFFF" />
+              <Text style={styles.jfButtonText}>
+                {syncing ? "同步中…" : "从 Jellyfin 导入"}
+              </Text>
+            </Pressable>
+          ) : null}
+          {jellyfinConfigure ? (
+            <Pressable
+              style={styles.jfGear}
+              onPress={() => jellyfinConfigure()}
+              accessibilityLabel="Jellyfin 设置"
+            >
+              <Settings size={16} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+        {syncMessage ? <Text style={styles.jfMessage}>{syncMessage}</Text> : null}
+        {backfillKnown ? (
+          <View style={styles.jfRow}>
+            <Pressable
+              style={[styles.jfButton, backfilling && { opacity: 0.6 }]}
+              disabled={backfilling}
+              onPress={() => void runBackfill()}
+              accessibilityLabel="补全元数据"
+            >
+              <Sparkles size={15} color="#FFFFFF" />
+              <Text style={styles.jfButtonText}>
+                {backfilling ? "补全中…" : "补全元数据"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {backfillMessage ? <Text style={styles.jfMessage}>{backfillMessage}</Text> : null}
       </ScrollView>
     );
   };
@@ -206,4 +317,21 @@ const styles = StyleSheet.create({
   chipTappable: { borderColor: colors.accent },
   chipText: { fontSize: 13, color: colors.text },
   drillHint: { fontSize: 12, color: colors.textMuted },
+  jfRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
+  jfButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+  },
+  jfButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: fontWeight.medium as never },
+  jfGear: {
+    padding: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  jfMessage: { fontSize: 12, color: colors.textMuted },
 });

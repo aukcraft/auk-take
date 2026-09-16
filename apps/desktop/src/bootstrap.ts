@@ -13,6 +13,8 @@ import { createEditPlugin } from "@auktake/plugin-edit";
 import { createRecordPlugin } from "@auktake/plugin-record";
 import { createTimelinePlugin } from "@auktake/plugin-timeline";
 import { createTmdbPlugin } from "@auktake/plugin-tmdb";
+import { createNetworkPlugin } from "@auktake/plugin-network";
+import { createJellyfinPlugin } from "@auktake/plugin-jellyfin";
 import { createTagPlugin } from "@auktake/plugin-tag";
 import { createSearchPlugin } from "@auktake/plugin-search";
 import { createStatsPlugin } from "@auktake/plugin-stats";
@@ -61,6 +63,9 @@ export function createRuntime(dev: boolean): AppRuntime {
   const deps: PluginRuntimeDeps = { events, capabilities, services, dev };
 
   const manager = new PluginManager({ connectionStore: memoryConnectionStore() });
+  // Phase 4: network (locked) BEFORE its consumers (tmdb/jellyfin resolve
+  // svc:http at create time; absent -> bare-fetch fallback).
+  manager.register(createNetworkPlugin(deps, { dev }));
   manager.register(createEditPlugin(deps));
   manager.register(createDisplayPlugin(deps));
   manager.register(createRecordPlugin(deps));
@@ -77,6 +82,8 @@ export function createRuntime(dev: boolean): AppRuntime {
   manager.register(createTagPlugin(deps));
   manager.register(createSearchPlugin(deps));
   manager.register(createStatsPlugin(deps));
+  // Phase 4: jellyfin (recommended) after edit (import channel) + network.
+  manager.register(createJellyfinPlugin(deps));
 
   const pluginContext = (pluginId: string): PluginContext => ({
     pluginId,

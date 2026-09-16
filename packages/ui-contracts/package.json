@@ -22,6 +22,7 @@
   "devDependencies": {
     "@auktake/core": "workspace:*",
     "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
     "@types/react": "18.3.12",
     "eslint": "^10.9.0",
     "react": "18.3.1",

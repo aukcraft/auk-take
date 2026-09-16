@@ -185,3 +185,32 @@ describe("EditSessionController pendingCandidate", () => {
     expect(session.getState().unbound).toBe(true);
   });
 });
+
+describe("RecordsWriter.importJellyfin", () => {
+  it("bulk-imports jellyfin records and emits created per record", async () => {
+    const { writer, published } = makeWriter();
+    const item = (id: string): MovieRecord => ({
+      ...buildManualSnapshot(draft(), id, T0),
+      source: { type: "jellyfin", jellyfin: { itemId: `jf-${id}`, playedAt: "2026-05-01", playCount: 1 } },
+    });
+    const count = await writer.importJellyfin([item("a"), item("b")]);
+    expect(count).toBe(2);
+    expect((await writer.loadAll()).length).toBe(2);
+    expect(published.map((p) => p.event)).toEqual([
+      RECORD_EVENTS.created,
+      RECORD_EVENTS.created,
+    ]);
+  });
+
+  it("empty input writes nothing and emits nothing", async () => {
+    const { writer, published } = makeWriter();
+    expect(await writer.importJellyfin([])).toBe(0);
+    expect(published).toEqual([]);
+  });
+
+  it("rejects non-jellyfin sources defensively", async () => {
+    const { writer } = makeWriter();
+    const evil = buildManualSnapshot(draft(), "x", T0); // source manual
+    await expect(writer.importJellyfin([evil])).rejects.toThrow("jellyfin");
+  });
+});

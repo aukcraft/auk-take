@@ -32,6 +32,7 @@ describe("constants", () => {
       CAPABILITY_KEYS.overlayRoot,
       CAPABILITY_KEYS.overlayRecordDetail,
       CAPABILITY_KEYS.overlayTmdbBackfill,
+      CAPABILITY_KEYS.overlayJellyfin,
     ]);
   });
 });
@@ -83,6 +84,7 @@ describe("phase-2 constants", () => {
       CAPABILITY_KEYS.overlayRoot,
       CAPABILITY_KEYS.overlayRecordDetail,
       CAPABILITY_KEYS.overlayTmdbBackfill,
+      CAPABILITY_KEYS.overlayJellyfin,
     ]);
   });
 });
@@ -108,5 +110,20 @@ describe("phase-3 constants", () => {
     expect(new Set(names).size).toBe(3);
     const all = [...Object.values(CAPABILITY_KEYS), ...names];
     expect(new Set(all).size).toBe(all.length);
+  });
+});
+
+describe("phase-4 constants", () => {
+  it("new keys stay unique across the whole set", async () => {
+    const keys = Object.values(CAPABILITY_KEYS);
+    expect(new Set(keys).size).toBe(keys.length);
+    const { OVERLAY_KEYS } = await import("../src/index");
+    expect(OVERLAY_KEYS).toContain(CAPABILITY_KEYS.overlayJellyfin);
+  });
+
+  it("HttpError carries kind/url/status", async () => {
+    const { HttpError } = await import("../src/index");
+    const e = new HttpError("status", "https://x/y", 401);
+    expect([e.kind, e.status, e.url]).toEqual(["status", 401, "https://x/y"]);
   });
 });

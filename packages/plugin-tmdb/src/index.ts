@@ -5,3 +5,4 @@ export * from "./headless/fs-port";
 export * from "./headless/image-cache";
 export * from "./headless/ui-store";
 export * from "./plugin";
+export { decryptSecret, encryptSecret, isEncryptedSecret } from "@auktake/ui-contracts";

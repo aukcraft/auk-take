@@ -5,3 +5,5 @@ export * from "./projection.js";
 export * from "./tmdb.js";
 export * from "./tags.js";
 export * from "./query.js";
+export * from "./http.js";
+export * from "./secret-crypto.js";

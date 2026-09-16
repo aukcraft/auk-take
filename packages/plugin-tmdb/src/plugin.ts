@@ -8,10 +8,13 @@ import { COLLECTIONS, type AukPlugin, type MovieRecord, type Storage, type TmdbS
 import {
   CAPABILITY_KEYS,
   FS_SERVICE,
+  HTTP_SERVICE,
   IMAGE_CACHE_SERVICE,
+  TMDB_EVENTS,
   type ImageCacheService,
   type PluginRuntimeDeps,
   type TmdbBackfillCommand,
+  type TmdbBackfillKnownCommand,
   type TmdbBackfillResult,
   type TmdbCandidate,
   type TmdbCandidateSnapshotCommand,
@@ -52,10 +55,15 @@ export function createTmdbPlugin(
 
     create() {
       const storage = deps.services.require<Storage>("storage");
+      // Phase 4: prefer svc:http (timeout/retry/logging); bare fetch fallback.
+      const http = deps.services.get<import("@auktake/ui-contracts").HttpService>(HTTP_SERVICE);
+      if (http === undefined && deps.dev) {
+        console.warn("[tmdb] svc:http absent — using bare fetch (no timeout/retry)");
+      }
       const service = new TmdbService({
         storage,
         events: deps.events,
-        fetchImpl: defaultFetch,
+        fetchImpl: http ?? defaultFetch,
       });
       const ui = new TmdbUiStore();
       void service.loadConfig();
@@ -65,6 +73,7 @@ export function createTmdbPlugin(
         CAPABILITY_KEYS.tmdbStatus,
         CAPABILITY_KEYS.tmdbCandidateSnapshot,
         CAPABILITY_KEYS.tmdbBackfill,
+        CAPABILITY_KEYS.tmdbBackfillKnown,
         CAPABILITY_KEYS.tmdbConfigure,
         CAPABILITY_KEYS.overlayTmdbBackfill,
       ];
@@ -136,6 +145,28 @@ export function createTmdbPlugin(
       };
       deps.capabilities.register(CAPABILITY_KEYS.tmdbBackfill, backfill);
 
+      // Phase 4: batch auto-backfill for records with a known tmdb.id
+      // (jellyfin imports auto-trigger this after a sync; the stats view
+      // exposes a manual button). Reentrancy-guarded; progress via event.
+      let backfillKnownRunning = false;
+      const backfillKnown: TmdbBackfillKnownCommand = async () => {
+        if (backfillKnownRunning) return { status: "already-running" };
+        backfillKnownRunning = true;
+        try {
+          const records = await storage.loadAll<MovieRecord>(COLLECTIONS.records);
+          return await service.backfillKnown(records, {
+            apply: recordApplyTmdb,
+            onProgress: (progress) =>
+              deps.events.emit(TMDB_EVENTS.backfillProgress, progress),
+          });
+        } catch (error) {
+          return { status: "error", message: error instanceof Error ? error.message : String(error) };
+        } finally {
+          backfillKnownRunning = false;
+        }
+      };
+      deps.capabilities.register(CAPABILITY_KEYS.tmdbBackfillKnown, backfillKnown);
+
       deps.capabilities.register(CAPABILITY_KEYS.tmdbConfigure, () => ui.openConfig());
 
       deps.capabilities.register(
@@ -165,7 +196,7 @@ export function createTmdbPlugin(
       if (fs && options.cacheDir) {
         const raw = new ImageCache({
           fs,
-          fetchImpl: defaultFetch,
+          fetchImpl: http ?? defaultFetch,
           cacheDir: options.cacheDir,
         });
         const toUri = options.toRenderUri ?? ((p: string) => p);

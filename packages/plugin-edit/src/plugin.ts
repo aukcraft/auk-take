@@ -75,6 +75,10 @@ export function createEditPlugin(deps: PluginRuntimeDeps): AukPlugin {
 
       deps.capabilities.register(CAPABILITY_KEYS.recordEdit, openEdit);
       deps.capabilities.register(CAPABILITY_KEYS.recordDelete, requestDelete);
+      // Phase 4 internal channel: jellyfin bulk import (sole-writer guard).
+      deps.capabilities.register(CAPABILITY_KEYS.recordApplyJellyfin, (records: readonly import("@auktake/core").MovieRecord[]) =>
+        writer.importJellyfin(records),
+      );
       // Phase 3 internal channel: tag reference cleanup (tag delete).
       deps.capabilities.register(CAPABILITY_KEYS.recordRemoveTag, (tagId: string) =>
         writer.removeTagFromAll(tagId),
@@ -106,6 +110,7 @@ export function createEditPlugin(deps: PluginRuntimeDeps): AukPlugin {
           deps.capabilities.unregister(CAPABILITY_KEYS.recordDelete);
           deps.capabilities.unregister(CAPABILITY_KEYS.recordApplyTmdb);
           deps.capabilities.unregister(CAPABILITY_KEYS.recordRemoveTag);
+          deps.capabilities.unregister(CAPABILITY_KEYS.recordApplyJellyfin);
           deps.capabilities.unregister(CAPABILITY_KEYS.overlayRoot);
         },
       };

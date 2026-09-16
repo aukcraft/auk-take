@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decryptSecret, encryptSecret, isEncryptedSecret } from "../src/headless/secret-crypto";
+import { decryptSecret, encryptSecret, isEncryptedSecret } from "../src/secret-crypto";
 
 describe("secret encryption", () => {
   it("round-trips arbitrary secrets (incl. CJK)", () => {

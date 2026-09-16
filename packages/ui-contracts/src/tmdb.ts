@@ -65,6 +65,24 @@ export type TmdbCandidateSnapshotCommand = (
 /** tmdb backfill command surface. */
 export type TmdbBackfillCommand = (recordId: string) => Promise<TmdbBackfillResult>;
 
+/** cmd:tmdb-backfill-known result (Phase 4: batch auto-backfill by known tmdb.id). */
+export type TmdbBackfillKnownResult =
+  | { readonly status: "done"; readonly updated: number; readonly skipped: number; readonly failed: number }
+  | { readonly status: "already-running" }
+  | { readonly status: "error"; readonly message: string };
+
+export type TmdbBackfillKnownCommand = () => Promise<TmdbBackfillKnownResult>;
+
+/** Payload of TMDB_EVENTS.backfillProgress — emitted per processed record. */
+export interface TmdbBackfillProgress {
+  /** Records processed so far in this run. */
+  readonly done: number;
+  /** Total records queued for this run. */
+  readonly total: number;
+  /** Successfully refreshed so far. */
+  readonly updated: number;
+}
+
 /** Persisted tmdb plugin config (syncMeta collection, id "tmdb-config"). */
 export interface TmdbConfig {
   /** v3 API key. Empty string = none. */
