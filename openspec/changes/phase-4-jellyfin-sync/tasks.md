@@ -33,4 +33,4 @@
 
 - [x] 6.1 双壳装配 network（先于消费者）+ jellyfin；OVERLAY_KEYS 增 jellyfin overlay；dep-guard 扩展
 - [x] 6.2 全仓 lint/typecheck/test 通过；desktop vite + mobile metro bundle 冒烟
-- [ ] 6.3 双端手工冒烟：配置验证 → 首次导入 N 条 → 海报墙/统计即时刷新（record:created）→ 重复同步 noop → 本地编辑不回写 → 卸载降级 → Phase 1–3 回归
+- [x] 6.3 双端手工冒烟：配置验证 → 首次导入 N 条 → 海报墙/统计即时刷新（record:created）→ 重复同步 noop → 本地编辑不回写 → 卸载降级 → Phase 1–3 回归
