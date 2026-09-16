@@ -27,6 +27,7 @@
 - [x] 5.1 配置弹层 overlay（URL/Key 输入、保存即 systemInfo 验证反馈、加密提示；`cmd:jellyfin-configure`）
 - [x] 5.2 同步入口（「我的」stats 底部按钮 + loading + 结果反馈：导入 N 条/无新条目/错误明细；未配置提示入口去设置）
 - [x] 5.3 plugin-tmdb：fetch 经 svc:http（services.get，缺失回退裸 fetch）；ImageCache 同步切换；既有单测不动（stub 注入路径不变）
+- [x] 5.4 元数据自动补全（冒烟新增）：`cmd:tmdb-backfill-known`（仅 tmdb.id 已知无海报；按 id 直拉/剧集 series+SE/404 计 skipped；250ms 节流 + 重入保护 + `tmdb:backfill-progress` 事件）+ jellyfin 同步后自动触发 + StatsView「补全元数据」按钮（进度/结果反馈）+ 单测（电影直拉/剧集解析与 404 skip/失败不中断与进度）
 
 ## 6. 壳装配与 CI
 

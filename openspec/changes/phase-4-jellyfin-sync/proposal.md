@@ -11,10 +11,10 @@ AukTake 已具备完整的手动录入与 TMDB 元数据能力，但 Jellyfin �
   - **增量同步**：`cmd:jellyfin-sync`（手动拉取）：以 `source.jellyfin.itemId + playedAt` 为身份去重（schema Phase 0 已预留），仅导入新条目；写入经 edit 内部通道（`cmd:record-apply-jellyfin`，保持唯一写入方），`source.type='jellyfin'` 携带 itemId/playedAt/playCount
   - **元数据映射**：Jellyfin item → TmdbSnapshot 形态（tmdb.id 取 ProviderIds.Tmdb，缺失则 0 = 仍可 TMDB 补全；genres/overview/runtime/releaseDate 直映；posterPath 留空走色卡/TMDB 补全——Jellyfin 图片 URL 不落 snapshot）
   - **同步 UI**：设置弹层（URL/Key，加密提示）+ 同步结果反馈（新增 N 条 / 无新条目 / 错误明细）
-- 修改 `packages/plugin-tmdb`：TmdbClient/ImageCache 的 fetchImpl 改经 `svc:http`（服务缺失时回退裸 fetch，行为不变）
+- 修改 `packages/plugin-tmdb`：TmdbClient/ImageCache 的 fetchImpl 改经 `svc:http`（服务缺失时回退裸 fetch，行为不变）；新增 `cmd:tmdb-backfill-known` 批量自动补全（仅 tmdb.id 已知且无海报的记录，按 id 直拉无歧义；`tmdb:backfill-progress` 进度事件）
 - 修改 `packages/plugin-edit`：暴露 `cmd:record-apply-jellyfin` 批量导入通道（保留 records 唯一写入方 invariant）
 - 修改 ui-contracts：`svc:http`/jellyfin key 常量与契约类型（`HttpService`、`JellyfinSyncCommand`、`RecordApplyJellyfinCommand`）
-- 壳：装配 plugin-network（locked，先于消费者）与 plugin-jellyfin（recommended）；「我的」tab 统计视图下加同步入口
+- 壳：装配 plugin-network（locked，先于消费者）与 plugin-jellyfin（recommended）；「我的」tab 统计视图下加同步入口与「补全元数据」入口；jellyfin 同步成功导入后自动触发元数据补全
 
 ### Non-goals（本 change 明确不做）
 

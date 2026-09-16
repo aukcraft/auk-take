@@ -54,6 +54,8 @@ export const CAPABILITY_KEYS = {
   overlayJellyfin: "ui:overlay:jellyfin",
   /** edit plugin (internal channel): bulk-import jellyfin records. */
   recordApplyJellyfin: "cmd:record-apply-jellyfin",
+  /** tmdb plugin: batch auto-backfill records whose tmdb.id is known (Phase 4). */
+  tmdbBackfillKnown: "cmd:tmdb-backfill-known",
   /** tmdb plugin: resolve a picked candidate into a full TmdbSnapshot. */
   tmdbCandidateSnapshot: "cmd:tmdb-candidate-snapshot",
   /** tmdb plugin: sync credential status probe (configured or not). */
@@ -78,6 +80,12 @@ export const OVERLAY_KEYS: readonly CapabilityKey[] = [
 export const JELLYFIN_EVENTS = {
   /** Emitted after each committed batch; payload: JellyfinSyncProgress. */
   syncProgress: "jellyfin:sync-progress",
+} as const;
+
+/** TMDB batch-backfill progress events published by the tmdb plugin (Phase 4). */
+export const TMDB_EVENTS = {
+  /** Emitted per processed record; payload: TmdbBackfillProgress. */
+  backfillProgress: "tmdb:backfill-progress",
 } as const;
 
 /** Tag collection change events published by the tag plugin (sole writer). */

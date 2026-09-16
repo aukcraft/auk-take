@@ -10,9 +10,11 @@ import {
   FS_SERVICE,
   HTTP_SERVICE,
   IMAGE_CACHE_SERVICE,
+  TMDB_EVENTS,
   type ImageCacheService,
   type PluginRuntimeDeps,
   type TmdbBackfillCommand,
+  type TmdbBackfillKnownCommand,
   type TmdbBackfillResult,
   type TmdbCandidate,
   type TmdbCandidateSnapshotCommand,
@@ -71,6 +73,7 @@ export function createTmdbPlugin(
         CAPABILITY_KEYS.tmdbStatus,
         CAPABILITY_KEYS.tmdbCandidateSnapshot,
         CAPABILITY_KEYS.tmdbBackfill,
+        CAPABILITY_KEYS.tmdbBackfillKnown,
         CAPABILITY_KEYS.tmdbConfigure,
         CAPABILITY_KEYS.overlayTmdbBackfill,
       ];
@@ -141,6 +144,28 @@ export function createTmdbPlugin(
         }
       };
       deps.capabilities.register(CAPABILITY_KEYS.tmdbBackfill, backfill);
+
+      // Phase 4: batch auto-backfill for records with a known tmdb.id
+      // (jellyfin imports auto-trigger this after a sync; the stats view
+      // exposes a manual button). Reentrancy-guarded; progress via event.
+      let backfillKnownRunning = false;
+      const backfillKnown: TmdbBackfillKnownCommand = async () => {
+        if (backfillKnownRunning) return { status: "already-running" };
+        backfillKnownRunning = true;
+        try {
+          const records = await storage.loadAll<MovieRecord>(COLLECTIONS.records);
+          return await service.backfillKnown(records, {
+            apply: recordApplyTmdb,
+            onProgress: (progress) =>
+              deps.events.emit(TMDB_EVENTS.backfillProgress, progress),
+          });
+        } catch (error) {
+          return { status: "error", message: error instanceof Error ? error.message : String(error) };
+        } finally {
+          backfillKnownRunning = false;
+        }
+      };
+      deps.capabilities.register(CAPABILITY_KEYS.tmdbBackfillKnown, backfillKnown);
 
       deps.capabilities.register(CAPABILITY_KEYS.tmdbConfigure, () => ui.openConfig());
 

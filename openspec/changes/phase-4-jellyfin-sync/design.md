@@ -59,6 +59,13 @@ edit 侧通道：`writer.importJellyfin(records)`——校验 `source.type==='je
 - 同步入口：「我的」stats 视图底部「从 Jellyfin 导入」按钮（`cmd:jellyfin-sync` 注册时显示）→ 执行 → 结果 toast 式 Text 反馈（导入 N 条/无新条目/错误）；`cmd:jellyfin-configure` 打开设置
 - 同步按钮 loading 态（进行中禁用）
 
+### D5b. 元数据自动补全（冒烟反馈新增）
+
+用户预期：Jellyfin 导入后元数据（海报等）自动补齐，而非逐条手动。边界：**仅 `tmdb.id > 0` 且无 posterPath 的记录**——按 id 直拉（`/movie/{id}`；剧集按「series id + S/E」：`/tv/{id}` + `/tv/{id}/season/{s}`，ProviderIds 为剧集级 id 时 404 → 计 skipped，不错绑）；`tmdb.id = 0` 哨兵记录仍走 Phase 2 手动搜索补全（有歧义需人工）。
+
+- `cmd:tmdb-backfill-known`：批量处理，250ms 节流（TMDB ~40req/10s），单条失败不中断（skipped/failed 计数），重入保护，`tmdb:backfill-progress` 事件逐条汇报 `{done,total,updated}`；写入经 `cmd:record-apply-tmdb`（edit 唯一写入方不变）
+- 触发：jellyfin 同步 `imported>0` 后自动 fire-and-forget 调用（能力缺失静默降级）+「我的」stats 视图「补全元数据」手动按钮（loading + 进度 + 结果汇总）
+
 ### D5. tmdb 消费迁移
 
 plugin-tmdb 的 `defaultFetch` 改为：组合根或 create 期 `services.get(HTTP_SERVICE)`，命中用之、否则裸 fetch。**单测不动**（测试注入 stub fetch 直接进 TmdbClient，svc:http 是运行时默认值）。ImageCache 同样经注入保持不动（其 fetchImpl 由 plugin.ts 传入——统一改为经 svc:http 解析的包装）。

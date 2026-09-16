@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Phase 4 契约常量与类型
-ui-contracts SHALL 以常量导出 Phase 4 的跨插件 key：服务名 `svc:http`（HTTP_SERVICE）、`cmd:jellyfin-sync`、`cmd:jellyfin-configure`、`cmd:record-apply-jellyfin`、事件名 `jellyfin:sync-progress`（JELLYFIN_EVENTS）。SHALL 导出契约类型：`HttpService`（fetch 兼容签名 + HttpError 错误类型 `{kind: "timeout"|"network"|"status", status?: number, url: string}`）、`JellyfinSyncCommand`（`() => Promise<JellyfinSyncResult>`，结果 `{status:"imported", count} | {status:"noop"} | {status:"error", message}`）、`JellyfinSyncProgress`（`{fetched, imported}`，sync-progress 事件负载）、`RecordApplyJellyfinCommand`。供需双方 SHALL 引用常量；新增 key 与既有全部 key 全局唯一。
+ui-contracts SHALL 以常量导出 Phase 4 的跨插件 key：服务名 `svc:http`（HTTP_SERVICE）、`cmd:jellyfin-sync`、`cmd:jellyfin-configure`、`cmd:record-apply-jellyfin`、事件名 `jellyfin:sync-progress`（JELLYFIN_EVENTS）、`cmd:tmdb-backfill-known`、`tmdb:backfill-progress`（TMDB_EVENTS）。SHALL 导出契约类型：`HttpService`（fetch 兼容签名 + HttpError 错误类型 `{kind: "timeout"|"network"|"status", status?: number, url: string}`）、`JellyfinSyncCommand`（`() => Promise<JellyfinSyncResult>`，结果 `{status:"imported", count} | {status:"noop"} | {status:"error", message}`）、`JellyfinSyncProgress`（`{page, fetched, imported}`，sync-progress 事件负载）、`TmdbBackfillKnownCommand`/`TmdbBackfillKnownResult`、`TmdbBackfillProgress`（`{done, total, updated}`）、`RecordApplyJellyfinCommand`。供需双方 SHALL 引用常量；新增 key 与既有全部 key 全局唯一。
 
 #### Scenario: 常量唯一性
 - **WHEN** 校验 Phase 4 新增 key

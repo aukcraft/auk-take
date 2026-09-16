@@ -13,6 +13,7 @@ import {
   type HttpService,
   type JellyfinSyncCommand,
   type PluginRuntimeDeps,
+  type TmdbBackfillKnownCommand,
 } from "@auktake/ui-contracts";
 import { JellyfinClient } from "./headless/jellyfin-client";
 import { JellyfinConfigStore } from "./headless/config";
@@ -55,7 +56,7 @@ export function createJellyfinPlugin(deps: PluginRuntimeDeps): AukPlugin {
 
       const sync: JellyfinSyncCommand = async () => {
         const client = new JellyfinClient({ http, baseUrl: config.baseUrl, apiKey: config.apiKey });
-        return syncJellyfin(
+        const result = await syncJellyfin(
           {
             client,
             storage,
@@ -75,6 +76,22 @@ export function createJellyfinPlugin(deps: PluginRuntimeDeps): AukPlugin {
           },
           config.baseUrl.length > 0 && config.apiKey.length > 0,
         );
+        // Auto-backfill metadata for imported records with a known tmdb.id
+        // (fire-and-forget: the tmdb plugin paces itself and reports via
+        // tmdb:backfill-progress; absent capability = degrade silently).
+        if (result.status === "imported" && result.count > 0) {
+          const backfill = deps.capabilities.get<TmdbBackfillKnownCommand>(
+            CAPABILITY_KEYS.tmdbBackfillKnown,
+          );
+          if (backfill) {
+            void backfill().catch((error: unknown) => {
+              if (deps.dev) console.warn("[jellyfin] auto-backfill failed", error);
+            });
+          } else if (deps.dev) {
+            console.warn(`[jellyfin] auto-backfill skipped: "${CAPABILITY_KEYS.tmdbBackfillKnown}" not registered`);
+          }
+        }
+        return result;
       };
       deps.capabilities.register(CAPABILITY_KEYS.jellyfinSync, sync);
 

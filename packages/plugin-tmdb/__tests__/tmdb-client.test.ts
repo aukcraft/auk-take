@@ -259,3 +259,107 @@ describe("defaultFetch regression (headers must reach fetch)", () => {
     expect(seen[0]?.init?.headers).toEqual({ Authorization: "Bearer eyJ.tok" });
   });
 });
+
+describe("backfillKnown (Phase 4 auto metadata refresh by known tmdb.id)", () => {
+  const record = (
+    id: string,
+    tmdb: { id: number; mediaType: "movie" | "episode"; posterPath?: string; season?: number; episode?: number },
+  ): import("@auktake/core").MovieRecord => ({
+    id,
+    schemaVersion: 1,
+    tmdb: {
+      id: tmdb.id,
+      mediaType: tmdb.mediaType,
+      title: "t",
+      originalTitle: "t",
+      overview: "",
+      posterPath: tmdb.posterPath ?? "",
+      backdropPath: "",
+      releaseDate: "",
+      genres: [],
+      runtime: 0,
+      ...(tmdb.mediaType === "episode"
+        ? { seasonNumber: tmdb.season ?? 1, episodeNumber: tmdb.episode ?? 1 }
+        : {}),
+    },
+    user: { watchedAt: "2026-05-01", rating: 0, review: "", tags: [] },
+    source: { type: "jellyfin", jellyfin: { itemId: id, playedAt: "2026-05-01", playCount: 1 } },
+    mediaCache: {},
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  async function serviceFor(route: (url: string) => { body: unknown; status?: number }) {
+    const fetchImpl = vi.fn(async (url: string) => {
+      const r = route(url);
+      return jsonResponse(r.body, r.status ?? 200);
+    });
+    const service = new TmdbService({
+      storage: new InMemoryStorage(),
+      events: new EventBus(),
+      fetchImpl: fetchImpl as unknown as FetchLike,
+    });
+    await service.saveConfig({ apiKey: "K", language: "zh-CN" });
+    return { service, fetchImpl };
+  }
+
+  const movieDetail = { id: 693134, title: "Dune: Part Two", poster_path: "/p.jpg", genres: [], runtime: 166 };
+  const tvDetail = { id: 42, name: "Shōgun", poster_path: "/tv.jpg", genres: [] };
+  const season1 = { episodes: [{ id: 4205, season_number: 1, episode_number: 5, still_path: "/e.jpg", name: "Ep 5" }] };
+
+  it("updates movies with known id and empty poster; skips already-postered and sentinel records", async () => {
+    const { service } = await serviceFor((url) =>
+      url.includes("/movie/693134") ? { body: movieDetail } : { body: {}, status: 404 },
+    );
+    const apply = vi.fn(async (_recordId: string, _snapshot: unknown) => {});
+    const result = await service.backfillKnown(
+      [
+        record("a", { id: 693134, mediaType: "movie" }),
+        record("b", { id: 693134, mediaType: "movie", posterPath: "/have.jpg" }),
+        record("c", { id: 0, mediaType: "movie" }),
+      ],
+      { apply, sleep: async () => {} },
+    );
+    expect(result).toEqual({ status: "done", updated: 1, skipped: 0, failed: 0 });
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(apply.mock.calls[0]![0]).toBe("a");
+    expect(apply.mock.calls[0]![1]).toMatchObject({ id: 693134, posterPath: "/p.jpg", runtime: 166 });
+  });
+
+  it("resolves episodes via series id + S/E; episode-level ids 404 and count as skipped", async () => {
+    const { service } = await serviceFor((url) => {
+      if (url.includes("/tv/42/season/1")) return { body: season1 };
+      if (url.includes("/tv/42")) return { body: tvDetail };
+      return { body: {}, status: 404 };
+    });
+    const apply = vi.fn(async (_recordId: string, _snapshot: unknown) => {});
+    const result = await service.backfillKnown(
+      [
+        record("e1", { id: 42, mediaType: "episode", season: 1, episode: 5 }),
+        record("e2", { id: 999999, mediaType: "episode", season: 1, episode: 1 }),
+      ],
+      { apply, sleep: async () => {} },
+    );
+    expect(result).toEqual({ status: "done", updated: 1, skipped: 1, failed: 0 });
+    expect(apply.mock.calls[0]![1]).toMatchObject({
+      mediaType: "episode",
+      posterPath: "/e.jpg",
+      seasonNumber: 1,
+      episodeNumber: 5,
+    });
+  });
+
+  it("upstream errors count as failed and never abort the run; progress fires per record", async () => {
+    const { service } = await serviceFor(() => ({ body: {}, status: 500 }));
+    const progress: { done: number; total: number; updated: number }[] = [];
+    const result = await service.backfillKnown(
+      [record("a", { id: 1, mediaType: "movie" }), record("b", { id: 2, mediaType: "movie" })],
+      { apply: vi.fn(async (_recordId: string, _snapshot: unknown) => {}), sleep: async () => {}, onProgress: (p) => progress.push(p) },
+    );
+    expect(result).toEqual({ status: "done", updated: 0, skipped: 0, failed: 2 });
+    expect(progress).toEqual([
+      { done: 1, total: 2, updated: 0 },
+      { done: 2, total: 2, updated: 0 },
+    ]);
+  });
+});

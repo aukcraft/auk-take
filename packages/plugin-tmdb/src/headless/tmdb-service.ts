@@ -6,6 +6,8 @@
 import { COLLECTIONS, type EventBus, type Storage } from "@auktake/core";
 import {
   DEFAULT_TMDB_CONFIG,
+  type TmdbBackfillKnownResult,
+  type TmdbBackfillProgress,
   type TmdbBackfillResult,
   type TmdbCandidate,
   type TmdbConfig,
@@ -205,6 +207,76 @@ export class TmdbService {
       client.tvEpisode(tvId, episode?.season ?? 1, episode?.episode ?? 1),
     ]);
     return buildEpisodeSnapshot(tv, ep);
+  }
+
+  /**
+   * Phase 4: refresh metadata for a record whose tmdb.id is ALREADY KNOWN
+   * (e.g. jellyfin ProviderIds) — no search, no review. Episodes treat the
+   * id as the series id (a series-level ProviderId resolves; an
+   * episode-level id 404s the season lookup -> counted as skipped).
+   */
+  async snapshotForRecord(
+    record: import("@auktake/core").MovieRecord,
+  ): Promise<import("@auktake/core").TmdbSnapshot> {
+    if (!this.configured) throw new TmdbError("invalid-key", "TMDB not configured");
+    const client = this.client();
+    if (record.tmdb.mediaType === "movie") {
+      return buildMovieSnapshotFull(await client.movieDetail(record.tmdb.id));
+    }
+    const [tv, ep] = await Promise.all([
+      client.tvDetail(record.tmdb.id),
+      client.tvEpisode(
+        record.tmdb.id,
+        record.tmdb.seasonNumber ?? 1,
+        record.tmdb.episodeNumber ?? 1,
+      ),
+    ]);
+    return buildEpisodeSnapshot(tv, ep);
+  }
+
+  /**
+   * Batch auto-backfill (cmd:tmdb-backfill-known): every record with a
+   * known tmdb.id and NO poster yet gets its metadata refreshed by id —
+   * unambiguous, no review. Per-record failures never abort the run:
+   * 404s count as skipped, everything else as failed. Paced (default
+   * 250ms) to stay under TMDB rate limits; progress per record.
+   */
+  async backfillKnown(
+    records: readonly import("@auktake/core").MovieRecord[],
+    deps: {
+      readonly apply?: (recordId: string, snapshot: import("@auktake/core").TmdbSnapshot) => Promise<void>;
+      readonly intervalMs?: number;
+      readonly sleep?: (ms: number) => Promise<void>;
+      readonly onProgress?: (progress: TmdbBackfillProgress) => void;
+    } = {},
+  ): Promise<TmdbBackfillKnownResult> {
+    const targets = records.filter((r) => r.tmdb.id > 0 && r.tmdb.posterPath === "");
+    const sleep =
+      deps.sleep ??
+      ((ms: number) =>
+        new Promise<void>((resolve) => {
+          const g = globalThis as { setTimeout?: (cb: () => void, ms: number) => unknown };
+          if (g.setTimeout && ms > 0) g.setTimeout(resolve, ms);
+          else resolve();
+        }));
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+    let done = 0;
+    for (const record of targets) {
+      try {
+        const snapshot = await this.snapshotForRecord(record);
+        await deps.apply?.(record.id, snapshot);
+        updated += 1;
+      } catch (error) {
+        if (error instanceof TmdbError && error.kind === "not-found") skipped += 1;
+        else failed += 1;
+      }
+      done += 1;
+      deps.onProgress?.({ done, total: targets.length, updated });
+      await sleep(deps.intervalMs ?? 250);
+    }
+    return { status: "done", updated, skipped, failed };
   }
 }
 
