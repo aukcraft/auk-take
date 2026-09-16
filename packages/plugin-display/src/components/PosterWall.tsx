@@ -8,6 +8,7 @@
  */
 import React, { useMemo } from "react";
 import {
+  Animated,
   FlatList,
   Image,
   Platform,
@@ -21,6 +22,7 @@ import type { CapabilityRegistry, MovieRecord } from "@auktake/core";
 import {
   CAPABILITY_KEYS,
   IMAGE_CACHE_SERVICE,
+  MOTION,
   POSTER_PALETTE,
   colorHash,
   colors,
@@ -32,6 +34,7 @@ import {
   type RecordDetailCommand,
 } from "@auktake/ui-contracts";
 import { resolveCardSource } from "../headless/selectors";
+import { useReducedMotion } from "./useReducedMotion";
 import {
   episodeBadge,
   ratingLabel,
@@ -94,6 +97,24 @@ function Card({
     };
   }, [record, imageCache]);
 
+  // Phase 5: resolved image fades in over the color card (MOTION.fast;
+  // reduced motion -> instant).
+  const reduced = useReducedMotion();
+  const fade = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (!uri) return;
+    if (reduced) {
+      fade.setValue(1);
+      return;
+    }
+    fade.setValue(0);
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: MOTION.duration.fast,
+      useNativeDriver: true,
+    }).start();
+  }, [uri, reduced, fade]);
+
   const pressable = openDetail !== undefined;
   const Wrapper = pressable ? Pressable : View;
   return (
@@ -106,7 +127,9 @@ function Card({
           -> deterministic color card. Color card renders immediately,
           the image swaps in once resolved. */}
       {uri ? (
-        <Image source={{ uri }} style={styles.cardImage} />
+        <Animated.View style={{ opacity: fade }}>
+          <Image source={{ uri }} style={styles.cardImage} />
+        </Animated.View>
       ) : (
         <ColorCard record={record} />
       )}

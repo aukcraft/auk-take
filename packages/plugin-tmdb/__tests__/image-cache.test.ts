@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { MemoryFs } from "../src/headless/fs-port";
-import { ImageCache, cacheKeyFor, evictPlan, type CacheIndexEntry } from "../src/headless/image-cache";
+import { ImageCache, cacheKeyFor, evictPlan, tierForUrl, tieredEvictPlan, type CacheIndexEntry } from "../src/headless/image-cache";
 import { listSentinelRecords } from "../src/headless/tmdb-service";
 
 function fetchOk(bytes: Uint8Array) {
@@ -106,5 +106,40 @@ describe("listSentinelRecords", () => {
       { id: "c", tmdb: { id: 0 } },
     ]);
     expect(ids).toEqual(["a", "c"]);
+  });
+});
+
+describe("Phase 5 tiered LRU", () => {
+  it("tierForUrl classifies by TMDB size segment", () => {
+    expect(tierForUrl("https://image.tmdb.org/t/p/w500/a.jpg")).toBe("poster");
+    expect(tierForUrl("https://image.tmdb.org/t/p/w185/b.jpg")).toBe("poster");
+    expect(tierForUrl("https://image.tmdb.org/t/p/w780/c.jpg")).toBe("backdrop");
+    expect(tierForUrl("https://image.tmdb.org/t/p/original/d.jpg")).toBe("backdrop");
+    expect(tierForUrl("https://image.tmdb.org/t/p/w300/e.jpg")).toBe("still");
+    expect(tierForUrl("https://other.example/x.jpg")).toBe("poster"); // unknown -> poster lane
+  });
+
+  it("a lane evicts within itself — posters never eaten by backdrops", () => {
+    const entries: CacheIndexEntry[] = [
+      { key: "p-old", size: 60, usedAt: 1, tier: "poster" },
+      { key: "p-new", size: 60, usedAt: 2, tier: "poster" },
+      { key: "b-old", size: 60, usedAt: 3, tier: "backdrop" },
+    ];
+    // backdrop lane: 20% of 500 = 100; existing 60 + incoming 60 > 100 -> evict b-old
+    const victims = tieredEvictPlan(entries, "backdrop", 60, 500);
+    expect(victims).toEqual(["b-old"]);
+    // poster lane untouched
+    expect(victims).not.toContain("p-old");
+  });
+
+  it("legacy index entries without tier land in the poster lane", () => {
+    const entries: CacheIndexEntry[] = [{ key: "legacy", size: 100, usedAt: 1 }];
+    // poster lane: 70% of 100 = 70; 100 + 1 > 70 -> legacy evicted
+    expect(tieredEvictPlan(entries, "poster", 1, 100)).toEqual(["legacy"]);
+    expect(tieredEvictPlan(entries, "backdrop", 1, 100)).toEqual([]);
+  });
+
+  it("under-share writes evict nothing", () => {
+    expect(tieredEvictPlan([], "poster", 10, 500)).toEqual([]);
   });
 });

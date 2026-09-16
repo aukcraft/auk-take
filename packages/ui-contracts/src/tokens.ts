@@ -27,6 +27,21 @@ export const fontWeight = {
 } as const;
 
 /**
+ * Motion tokens (Phase 5): durations in ms + named easing curves, one JS
+ * object consumed by both platforms (ui-nav tab transitions, display
+ * fades). Implementations use RN's built-in Animated API; when the
+ * platform reports reduced motion, all animation MUST complete
+ * instantly regardless of these values.
+ */
+export const MOTION = {
+  duration: { fast: 150, base: 250, slow: 400 },
+  /** RN Easing names resolved at the call site (easing module lives in RN). */
+  easing: { standard: "easeOut", emphasized: "easeInOut" },
+} as const;
+
+export type MotionDuration = keyof typeof MOTION.duration;
+
+/**
  * Poster placeholder palette (8 slots). Each slot pairs a background
  * color with a readable foreground text color (contrast-checked
  * light-on-dark pairs; risk note in design.md accepted).

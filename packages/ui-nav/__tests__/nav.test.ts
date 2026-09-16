@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { CapabilityRegistry } from "@auktake/core";
-import { DEFAULT_TABS, NavState, visibleTabs } from "../src/index.js";
+import { DEFAULT_TABS, NavState, adjacentTabId, shouldSwipeSwitch, visibleTabs } from "../src/index.js";
 
 const registerAll = (reg: CapabilityRegistry, skip: string[] = []) => {
   for (const t of DEFAULT_TABS) {
@@ -65,5 +65,23 @@ describe("NavState", () => {
     expect(ok).not.toHaveBeenCalled();
     nav.switchTo("calendar");
     expect(ok).toHaveBeenCalledWith("calendar");
+  });
+});
+
+describe("phase-5 motion/gesture logic", () => {
+  it("shouldSwipeSwitch requires horizontal dominance + threshold", () => {
+    expect(shouldSwipeSwitch(80, 10)).toBe(true);
+    expect(shouldSwipeSwitch(-80, 10)).toBe(true);
+    expect(shouldSwipeSwitch(59, 0)).toBe(false); // under threshold
+    expect(shouldSwipeSwitch(80, 50)).toBe(false); // not dominant (80 <= 2*50)
+    expect(shouldSwipeSwitch(10, 80)).toBe(false); // vertical scroll
+  });
+
+  it("adjacentTabId walks the visible list and stops at edges", () => {
+    const tabs = DEFAULT_TABS;
+    expect(adjacentTabId(tabs, "records", 1)).toBe("calendar");
+    expect(adjacentTabId(tabs, "calendar", -1)).toBe("records");
+    expect(adjacentTabId(tabs, "records", -1)).toBeUndefined();
+    expect(adjacentTabId(tabs, "profile", 1)).toBeUndefined();
   });
 });

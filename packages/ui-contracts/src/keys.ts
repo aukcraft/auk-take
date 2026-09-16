@@ -60,6 +60,14 @@ export const CAPABILITY_KEYS = {
   tmdbCandidateSnapshot: "cmd:tmdb-candidate-snapshot",
   /** tmdb plugin: sync credential status probe (configured or not). */
   tmdbStatus: "cmd:tmdb-status",
+  /** mood plugin: open the mood-entry composer for a record (Phase 5). */
+  moodAdd: "cmd:mood-add",
+  /** mood plugin: global mood composer overlay component (Phase 5). */
+  overlayMood: "ui:overlay:mood",
+  /** mood plugin: the read tab content (mood timeline + reviews, Phase 5). */
+  tabRead: "ui:tab:read",
+  /** share plugin: generate + export a share poster for a record (Phase 5). */
+  sharePoster: "cmd:share-poster",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITY_KEYS)[keyof typeof CAPABILITY_KEYS];
@@ -74,6 +82,7 @@ export const OVERLAY_KEYS: readonly CapabilityKey[] = [
   CAPABILITY_KEYS.overlayRecordDetail,
   CAPABILITY_KEYS.overlayTmdbBackfill,
   CAPABILITY_KEYS.overlayJellyfin,
+  CAPABILITY_KEYS.overlayMood,
 ];
 
 /** Jellyfin sync progress events published by the jellyfin plugin (Phase 4 batched sync). */
@@ -86,6 +95,11 @@ export const JELLYFIN_EVENTS = {
 export const TMDB_EVENTS = {
   /** Emitted per processed record; payload: TmdbBackfillProgress. */
   backfillProgress: "tmdb:backfill-progress",
+} as const;
+
+/** Mood-entry events published by the mood plugin (sole writer, Phase 5). */
+export const MOOD_EVENTS = {
+  created: "mood:created",
 } as const;
 
 /** Tag collection change events published by the tag plugin (sole writer). */

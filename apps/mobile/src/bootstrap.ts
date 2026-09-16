@@ -17,6 +17,8 @@ import { createJellyfinPlugin } from "@auktake/plugin-jellyfin";
 import { createTagPlugin } from "@auktake/plugin-tag";
 import { createSearchPlugin } from "@auktake/plugin-search";
 import { createStatsPlugin } from "@auktake/plugin-stats";
+import { createMoodPlugin } from "@auktake/plugin-mood";
+import { createSharePlugin } from "@auktake/plugin-share";
 import type { PluginRuntimeDeps } from "@auktake/ui-contracts";
 
 /**
@@ -70,6 +72,9 @@ export function createRuntime(): AppRuntime {
   manager.register(createStatsPlugin(deps));
   // Phase 4: jellyfin (recommended) after edit (import channel) + network.
   manager.register(createJellyfinPlugin(deps));
+  // Phase 5: mood (recommended, read tab + composer) + share (recommended).
+  manager.register(createMoodPlugin(deps));
+  manager.register(createSharePlugin(deps));
 
   const pluginContext = (pluginId: string): PluginContext => ({
     pluginId,

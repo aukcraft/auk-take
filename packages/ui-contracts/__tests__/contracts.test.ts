@@ -33,6 +33,7 @@ describe("constants", () => {
       CAPABILITY_KEYS.overlayRecordDetail,
       CAPABILITY_KEYS.overlayTmdbBackfill,
       CAPABILITY_KEYS.overlayJellyfin,
+      CAPABILITY_KEYS.overlayMood,
     ]);
   });
 });
@@ -85,6 +86,7 @@ describe("phase-2 constants", () => {
       CAPABILITY_KEYS.overlayRecordDetail,
       CAPABILITY_KEYS.overlayTmdbBackfill,
       CAPABILITY_KEYS.overlayJellyfin,
+      CAPABILITY_KEYS.overlayMood,
     ]);
   });
 });
@@ -125,5 +127,32 @@ describe("phase-4 constants", () => {
     const { HttpError } = await import("../src/index");
     const e = new HttpError("status", "https://x/y", 401);
     expect([e.kind, e.status, e.url]).toEqual(["status", 401, "https://x/y"]);
+  });
+});
+
+describe("phase-5 constants", () => {
+  it("new keys stay unique across the whole set and mood overlay is hosted", async () => {
+    const { CAPABILITY_KEYS, OVERLAY_KEYS, MOOD_EVENTS } = await import("../src/index");
+    const keys = Object.values(CAPABILITY_KEYS);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(OVERLAY_KEYS).toContain(CAPABILITY_KEYS.overlayMood);
+    expect(keys).not.toContain(MOOD_EVENTS.created);
+    // read tab capability key matches the ui-nav TabDefinition convention
+    expect(CAPABILITY_KEYS.tabRead).toBe("ui:tab:read");
+  });
+
+  it("motion tokens: three duration tiers + named easings (dual-platform single source)", async () => {
+    const { MOTION } = await import("../src/index");
+    expect(Object.keys(MOTION.duration).sort()).toEqual(["base", "fast", "slow"]);
+    expect(MOTION.duration.fast).toBe(150);
+    expect(MOTION.duration.base).toBe(250);
+    expect(MOTION.duration.slow).toBe(400);
+    expect(MOTION.easing.standard).toBe("easeOut");
+  });
+
+  it("mood kinds carry a fixed emoji mapping", async () => {
+    const { MOOD_KINDS, MOOD_EMOJI } = await import("../src/index");
+    expect(MOOD_KINDS).toEqual(["love", "ok", "meh", "bored", "sad"]);
+    for (const kind of MOOD_KINDS) expect(MOOD_EMOJI[kind].length).toBeGreaterThan(0);
   });
 });

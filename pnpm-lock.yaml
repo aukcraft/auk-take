@@ -29,6 +29,9 @@ importers:
       '@auktake/plugin-jellyfin':
         specifier: workspace:*
         version: link:../../packages/plugin-jellyfin
+      '@auktake/plugin-mood':
+        specifier: workspace:*
+        version: link:../../packages/plugin-mood
       '@auktake/plugin-network':
         specifier: workspace:*
         version: link:../../packages/plugin-network
@@ -38,6 +41,9 @@ importers:
       '@auktake/plugin-search':
         specifier: workspace:*
         version: link:../../packages/plugin-search
+      '@auktake/plugin-share':
+        specifier: workspace:*
+        version: link:../../packages/plugin-share
       '@auktake/plugin-stats':
         specifier: workspace:*
         version: link:../../packages/plugin-stats
@@ -126,6 +132,9 @@ importers:
       '@auktake/plugin-jellyfin':
         specifier: workspace:*
         version: link:../../packages/plugin-jellyfin
+      '@auktake/plugin-mood':
+        specifier: workspace:*
+        version: link:../../packages/plugin-mood
       '@auktake/plugin-network':
         specifier: workspace:*
         version: link:../../packages/plugin-network
@@ -135,6 +144,9 @@ importers:
       '@auktake/plugin-search':
         specifier: workspace:*
         version: link:../../packages/plugin-search
+      '@auktake/plugin-share':
+        specifier: workspace:*
+        version: link:../../packages/plugin-share
       '@auktake/plugin-stats':
         specifier: workspace:*
         version: link:../../packages/plugin-stats
@@ -385,6 +397,46 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@26.2.0)(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.50.0)
 
+  packages/plugin-mood:
+    dependencies:
+      '@auktake/core':
+        specifier: workspace:*
+        version: link:../core
+      '@auktake/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
+      '@auktake/ui-nav':
+        specifier: workspace:*
+        version: link:../ui-nav
+      ulid:
+        specifier: ^2.3.0
+        version: 2.4.0
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.9.0(supports-color@8.1.1))
+      '@types/react':
+        specifier: 18.3.12
+        version: 18.3.12
+      eslint:
+        specifier: ^10.9.0
+        version: 10.9.0(supports-color@8.1.1)
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-native:
+        specifier: 0.87.0
+        version: 0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native-community/cli@20.2.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.12)(react@18.3.1)(supports-color@8.1.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.67.0
+        version: 8.67.0(eslint@10.9.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.50.0)
+
   packages/plugin-network:
     dependencies:
       '@auktake/core':
@@ -504,6 +556,40 @@ importers:
       react-native-svg:
         specifier: ^15.7.0
         version: 15.15.5(react-native@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native-community/cli@20.2.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.12)(react@18.3.1)(supports-color@8.1.1))(react@18.3.1)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.67.0
+        version: 8.67.0(eslint@10.9.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.50.0)
+
+  packages/plugin-share:
+    dependencies:
+      '@auktake/core':
+        specifier: workspace:*
+        version: link:../core
+      '@auktake/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
+    devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.9.0(supports-color@8.1.1))
+      '@types/react':
+        specifier: 18.3.12
+        version: 18.3.12
+      eslint:
+        specifier: ^10.9.0
+        version: 10.9.0(supports-color@8.1.1)
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-native:
+        specifier: 0.87.0
+        version: 0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native-community/cli@20.2.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.87.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.12)(react@18.3.1)(supports-color@8.1.1)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3

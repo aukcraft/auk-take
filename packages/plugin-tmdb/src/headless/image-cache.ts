@@ -70,6 +70,57 @@ export interface CacheIndexEntry {
   readonly size: number;
   /** Monotonic use counter; larger = more recent. */
   usedAt: number;
+  /** Phase 5: capacity tier derived from the URL size segment. */
+  readonly tier?: ImageTier;
+}
+
+/**
+ * Phase 5 tiering: poster / backdrop / still lanes (spec image-cache
+ * "LRU 容量与原子写"). Classification uses the TMDB size segment
+ * (/t/p/<size>/); unknown/non-TMDB URLs land in the poster lane.
+ */
+export type ImageTier = "poster" | "backdrop" | "still";
+
+export function tierForUrl(url: string): ImageTier {
+  const size = /\/t\/p\/(w\d+|original)\//.exec(url)?.[1] ?? "";
+  if (size === "w780" || size === "w1280" || size === "original") return "backdrop";
+  if (size === "w300") return "still";
+  return "poster";
+}
+
+/** Lane capacity shares: posters dominate; backdrops/stills get the rest. */
+export const TIER_SHARES: Readonly<Record<ImageTier, number>> = {
+  poster: 0.7,
+  backdrop: 0.2,
+  still: 0.1,
+};
+
+/**
+ * Tiered LRU eviction plan: an incoming write evicts the oldest entries
+ * WITHIN ITS OWN lane until that lane fits its share. Lanes never
+ * evict each other's entries — poster capacity is never eaten by
+ * backdrops (spec scenario "backdrop 入缓存").
+ */
+export function tieredEvictPlan(
+  entries: readonly CacheIndexEntry[],
+  incomingTier: ImageTier,
+  incomingBytes: number,
+  capacityBytes: number,
+): string[] {
+  const lane = entries.filter((e) => (e.tier ?? "poster") === incomingTier);
+  const laneCapacity = Math.floor(capacityBytes * TIER_SHARES[incomingTier]);
+  const total = lane.reduce((sum, e) => sum + e.size, 0) + incomingBytes;
+  if (total <= laneCapacity) return [];
+  const byAge = [...lane].sort((a, b) => a.usedAt - b.usedAt);
+  const victims: string[] = [];
+  let freed = 0;
+  const excess = total - laneCapacity;
+  for (const entry of byAge) {
+    if (freed >= excess) break;
+    victims.push(entry.key);
+    freed += entry.size;
+  }
+  return victims;
 }
 
 /** Pure LRU eviction plan (testable): returns keys to delete. */
@@ -185,7 +236,8 @@ export class ImageCache implements ImageCacheService {
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (bytes.length === 0) return null;
 
-      for (const victim of evictPlan([...this.index.values()], this.capacity, bytes.length)) {
+      const tier = tierForUrl(url);
+      for (const victim of tieredEvictPlan([...this.index.values()], tier, bytes.length, this.capacity)) {
         await this.deps.fs.remove(this.fileName(victim));
         this.index.delete(victim);
       }
@@ -193,7 +245,7 @@ export class ImageCache implements ImageCacheService {
       const tmp = `${path}.tmp`;
       await this.deps.fs.writeFile(tmp, bytes);
       await this.deps.fs.rename(tmp, path); // atomic swap-in
-      this.index.set(key, { key, size: bytes.length, usedAt: ++this.counter });
+      this.index.set(key, { key, size: bytes.length, usedAt: ++this.counter, tier });
       await this.persistIndex();
       return path;
     } catch {

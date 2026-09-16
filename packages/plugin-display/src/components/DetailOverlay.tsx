@@ -5,8 +5,10 @@
  * (poster wall, timeline, calendar day panel). Action buttons only
  * FORWARD edit commands; display owns no mutation logic.
  */
-import React, { useSyncExternalStore } from "react";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
+  Animated,
+  Easing,
   Modal,
   Platform,
   Pressable,
@@ -20,7 +22,10 @@ import type { CapabilityRegistry } from "@auktake/core";
 import type { Projection } from "@auktake/ui-contracts";
 import {
   CAPABILITY_KEYS,
+  MOTION,
   colors,
+  type MoodAddCommand,
+  type SharePosterCommand,
   type TagListCommand,
   fontWeight,
   radius,
@@ -29,6 +34,7 @@ import {
   type RecordEditCommand,
 } from "@auktake/ui-contracts";
 import { episodeBadge, ratingLabel } from "../headless/selectors";
+import { useReducedMotion } from "./useReducedMotion";
 
 /** Tiny store for the currently shown detail id. */
 export class DetailStore {
@@ -97,12 +103,36 @@ export function createDetailOverlay(
       CAPABILITY_KEYS.tmdbBackfill,
     );
     const tagList = capabilities.get<TagListCommand>(CAPABILITY_KEYS.tagList);
+    // Phase 5: mood composer + share poster entries (each hidden when
+    // its plugin is absent).
+    const moodAdd = capabilities.get<MoodAddCommand>(CAPABILITY_KEYS.moodAdd);
+    const sharePoster = capabilities.get<SharePosterCommand>(CAPABILITY_KEYS.sharePoster);
+    const [sharing, setSharing] = useState(false);
+
+    // Phase 5: backdrop fade + card rise (Modal animationType="none" so
+    // both layers animate independently; reduced motion -> instant).
+    const reduced = useReducedMotion();
+    const anim = useRef(new Animated.Value(1)).current;
+    useEffect(() => {
+      if (!record) return;
+      if (reduced) {
+        anim.setValue(1);
+        return;
+      }
+      anim.setValue(0);
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: MOTION.duration.base,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }, [record, reduced, anim]);
 
     return (
       <Modal
         visible={record !== undefined}
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => store.close()}
       >
         {record ? (
@@ -112,7 +142,18 @@ export function createDetailOverlay(
               Platform.OS === "web" ? styles.overlayCenter : styles.overlayBottom,
             ]}
           >
-            <View style={styles.card}>
+            <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: anim }]} />
+            <Animated.View
+              style={[
+                styles.card,
+                {
+                  opacity: anim,
+                  transform: [
+                    { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) },
+                  ],
+                },
+              ]}
+            >
               <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.title}>{record.tmdb.title}</Text>
                 {record.tmdb.originalTitle !== record.tmdb.title ? (
@@ -181,6 +222,31 @@ export function createDetailOverlay(
                     <Text style={styles.actionText}>补全元数据</Text>
                   </Pressable>
                 ) : null}
+                {moodAdd ? (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      store.close(); // hand over to the mood composer overlay
+                      moodAdd(record.id);
+                    }}
+                  >
+                    <Text style={styles.actionText}>记心情</Text>
+                  </Pressable>
+                ) : null}
+                {sharePoster ? (
+                  <Pressable
+                    style={styles.actionButton}
+                    disabled={sharing}
+                    onPress={() => {
+                      setSharing(true);
+                      void sharePoster(record.id)
+                        .catch(() => undefined)
+                        .finally(() => setSharing(false));
+                    }}
+                  >
+                    <Text style={styles.actionText}>{sharing ? "分享中…" : "分享"}</Text>
+                  </Pressable>
+                ) : null}
                 {openEditor ? (
                   <Pressable
                     style={styles.actionButton}
@@ -204,7 +270,7 @@ export function createDetailOverlay(
                   </Pressable>
                 ) : null}
               </View>
-            </View>
+            </Animated.View>
           </View>
         ) : null}
       </Modal>
@@ -213,7 +279,8 @@ export function createDetailOverlay(
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: spacing.lg },
+  overlay: { flex: 1, padding: spacing.lg },
+  backdrop: { backgroundColor: "rgba(0,0,0,0.55)" },
   overlayBottom: { justifyContent: "flex-end" },
   overlayCenter: { alignItems: "center", justifyContent: "center" },
   card: {

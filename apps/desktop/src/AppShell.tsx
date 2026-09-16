@@ -1,8 +1,79 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import type { CapabilityRegistry } from "@auktake/core";
-import { colors } from "@auktake/ui-contracts";
+import { MOTION, colors } from "@auktake/ui-contracts";
 import type { TabDefinition, TabId } from "@auktake/ui-nav";
+
+/** True when the OS asks for reduced motion (design D5: instant settle). */
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((v) => {
+      if (alive) setReduced(v);
+    });
+    const sub = AccessibilityInfo.addEventListener?.("reduceMotionChanged", setReduced);
+    return () => {
+      alive = false;
+      sub?.remove?.();
+    };
+  }, []);
+  return reduced;
+}
+
+/**
+ * Tab entrance transition: fade + 8px rise on every remount (callers
+ * key this view by tab id). MOTION tokens are the single source;
+ * reduced motion settles instantly.
+ */
+function EntranceView({
+  reduced,
+  style,
+  children,
+}: {
+  reduced: boolean;
+  style?: object;
+  children?: React.ReactNode;
+}) {
+  const anim = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  useEffect(() => {
+    if (reduced) {
+      anim.setValue(1);
+      return;
+    }
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: MOTION.duration.base,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [anim, reduced]);
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: anim,
+          transform: [
+            { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+          ],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
 
 interface AppShellProps {
   tabs: TabDefinition[];
@@ -26,6 +97,7 @@ const BOTTOM_NAV_BREAKPOINT = 720;
 export function AppShell({ tabs, current, titles, registry, onSwitch }: AppShellProps) {
   const { width } = useWindowDimensions();
   const wide = width >= BOTTOM_NAV_BREAKPOINT;
+  const reduced = useReducedMotion();
   const Content = registry.get<ContentComponent>(
     tabs.find((t) => t.id === current)?.capabilityKey ?? "",
   );
@@ -51,7 +123,11 @@ export function AppShell({ tabs, current, titles, registry, onSwitch }: AppShell
           ))}
         </View>
       ) : null}
-      <View style={styles.main}>{Content ? <Content /> : null}</View>
+      <View style={styles.main}>
+        <EntranceView key={current} reduced={reduced} style={styles.mainContent}>
+          {Content ? <Content /> : null}
+        </EntranceView>
+      </View>
       {!wide ? (
         <View style={styles.tabbar}>
           {tabs.map((t) => (
@@ -89,6 +165,7 @@ const styles = StyleSheet.create({
   sideText: { fontSize: 15, color: "#EDEDF2" },
   sideTextActive: { fontWeight: "600" },
   main: { flex: 1, overflow: "hidden", backgroundColor: colors.bg },
+  mainContent: { flex: 1 },
   tabbar: {
     width: "100%",
     backgroundColor: colors.surface,
